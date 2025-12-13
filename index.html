@@ -96,8 +96,9 @@ body{
 
 /* =====================================================
    “非3D” flip（Safariでもスクロール壊れない）
+   ＋モザイク演出
 ===================================================== */
-.cardFlip{ position:relative; }
+.cardFlip{ position:relative; cursor:pointer; }
 .cardFlipInner{
   position:relative;
   min-height:360px;
@@ -110,22 +111,37 @@ body{
   background: linear-gradient(180deg,var(--glass-bg),var(--glass-bg2));
   opacity:0;
   pointer-events:none;
-  transition: opacity .28s ease;
+  transition: opacity .60s ease;            /* ★ゆっくり */
+  will-change: opacity, filter;
 }
 .cardFace.front{ opacity:1; pointer-events:auto; }
 .cardFlip.is-flipped .cardFace.front{ opacity:0; pointer-events:none; }
 .cardFlip.is-flipped .cardFace.back { opacity:1; pointer-events:auto; }
 
-/* 切替時の“ぬるっと感” */
-.cardFace .chartInnerSwitch{
-  transform-origin:50% 50%;
+/* モザイクっぽい“特別画面”演出（ノイズ＋格子＋ブラー） */
+.cardFace::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:0;
+  mix-blend-mode:multiply;
+  background:
+    radial-gradient(1200px 600px at 20% 20%, rgba(225,138,106,.22), transparent 60%),
+    radial-gradient(1000px 520px at 85% 10%, rgba(208,100,99,.18), transparent 58%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.065) 0 1px, transparent 1px 10px),
+    repeating-linear-gradient(0deg,  rgba(0,0,0,.055) 0 1px, transparent 1px 10px);
+  filter: blur(0px);
+  transition: opacity .60s ease, filter .60s ease;
 }
+
+/* 切替中だけ出す */
 .cardFlip.is-animating .cardFace{
-  filter: blur(.6px);
+  filter: blur(4px) saturate(1.08) contrast(1.02);
 }
-@media (prefers-reduced-motion: reduce){
-  .cardFace{ transition:none; }
-  .cardFlip.is-animating .cardFace{ filter:none; }
+.cardFlip.is-animating .cardFace::after{
+  opacity:1;
+  filter: blur(1.6px);
 }
 
 /* ===== card head ===== */
@@ -137,14 +153,24 @@ body{
 }
 .title .h{ font-weight:900; font-size:14px; letter-spacing:.06em; }
 .title .s{ font-size:12px; color:rgba(34,34,34,.6); }
-.badgeBig{ text-align:right; }
-.badgeBig .k{ font-size:11px; font-weight:800; color:rgba(34,34,34,.55); }
+
+.badgeBig{
+  text-align:right;
+  min-width: 88px;          /* ★iPhoneで潰れにくく */
+  flex: 0 0 auto;
+}
+.badgeBig .k{
+  font-size:11px; font-weight:800; color:rgba(34,34,34,.55);
+  white-space:nowrap;       /* ★受注件数を改行させない */
+  display:inline-block;     /* ★確実に折らせない */
+}
 .badgeBig .v{ font-size:18px; font-weight:900; }
 
 /* ===== chart ===== */
 .chartWrap{
   padding:12px 0;
   overflow:hidden;
+  cursor:default; /* グラフ周辺は“操作領域”っぽく */
 }
 .chartFrame{ position:relative; padding:0 12px 10px; }
 
@@ -166,12 +192,11 @@ body{
 /* 左余白（Y軸固定分） */
 .chartInner{
   padding-left:42px;
-  display:inline-block;          /* ★中身の幅で伸びる */
+  display:inline-block;
 }
 .chartMount{
-  display:inline-block;          /* ★中身の幅で伸びる */
+  display:inline-block;
 }
-/* SVGはブロック化（幅計算が安定） */
 .chartMount svg{
   display:block;
   pointer-events:none;
@@ -197,7 +222,6 @@ body{
 
 /* ===== calendar ===== */
 .calendar{ padding:12px; }
-
 .calBox{
   position:relative; border-radius:14px; overflow:hidden;
   border:1px solid rgba(0,0,0,.08);
@@ -216,7 +240,6 @@ body{
   -webkit-backdrop-filter:blur(10px);
 }
 .calTop{ display:flex; justify-content:space-between; padding:6px 4px 10px; font-weight:900; }
-
 .calGrid{
   display:grid;
   grid-template-columns:repeat(7,1fr);
@@ -229,7 +252,6 @@ body{
 .dow{ text-align:center; font-weight:900; background:rgba(255,255,255,.65); }
 .day{ position:relative; }
 .num{ position:absolute; top:6px; left:6px; font-weight:900; }
-
 .pill{
   display:inline-block;
   margin-top:18px; padding:4px 8px; border-radius:999px;
@@ -249,7 +271,6 @@ body{
 /* ===== table ===== */
 .listTitle{ padding:12px 14px 6px; font-weight:900; }
 .list{ padding:10px 12px 12px; }
-
 .tableWrap{
   overflow:auto;
   -webkit-overflow-scrolling:touch;
@@ -271,7 +292,6 @@ body{
   z-index:1;
 }
 .row td{ padding:10px; border-bottom:1px solid rgba(0,0,0,.06); }
-
 .status{
   display:inline-flex; gap:8px; align-items:center;
   padding:6px 10px;
@@ -284,6 +304,12 @@ body{
 .st-wait  .dot{ background:var(--wait); }
 .st-done  .dot{ background:var(--done); }
 .st-todo  .dot{ background:var(--todo); }
+
+@media (prefers-reduced-motion: reduce){
+  .cardFace{ transition:none; }
+  .cardFlip.is-animating .cardFace{ filter:none; }
+  .cardFace::after{ transition:none; }
+}
 </style>
 </head>
 
@@ -321,7 +347,7 @@ body{
               <div class="chartFrame">
                 <div class="yAxisFixed" id="yAxisFixedA"></div>
                 <div class="chartScroller" id="chartScrollerA">
-                  <div class="chartInner chartInnerSwitch">
+                  <div class="chartInner">
                     <div class="chartMount" id="chartMountA"></div>
                   </div>
                 </div>
@@ -349,7 +375,7 @@ body{
               <div class="chartFrame">
                 <div class="yAxisFixed" id="yAxisFixedB"></div>
                 <div class="chartScroller" id="chartScrollerB">
-                  <div class="chartInner chartInnerSwitch">
+                  <div class="chartInner">
                     <div class="chartMount" id="chartMountB"></div>
                   </div>
                 </div>
@@ -488,7 +514,6 @@ body{
     yAxis: document.getElementById("yAxisFixedA"),
     scroller: document.getElementById("chartScrollerA"),
     metricValue: document.getElementById("metricValueA"),
-    dragging:false,
     _pts:[]
   };
   const B = {
@@ -496,7 +521,6 @@ body{
     yAxis: document.getElementById("yAxisFixedB"),
     scroller: document.getElementById("chartScrollerB"),
     metricValue: document.getElementById("metricValueB"),
-    dragging:false,
     _pts:[]
   };
 
@@ -604,7 +628,6 @@ body{
     g.insertBefore(r, t);
   }
 
-  /* ===== 描画（面ごと） ===== */
   function renderChartInto(elems, mode, {keepScroll=true} = {}){
     const isOrders = (mode === "orders");
     const series = isOrders ? orders : assets;
@@ -616,7 +639,6 @@ body{
     const innerH=H-padT-padB;
     const W=16 + xStep*(N-1) + padR;
 
-    // ★ここが超重要：スクロール幅を “確実に” 作る
     elems.mount.style.width = `${42 + W}px`;
 
     const prevSL = elems.scroller.scrollLeft;
@@ -667,7 +689,6 @@ body{
       label: isOrders ? `${p.v}件` : formatJPY(p.v)
     }));
 
-    // ★初回だけ右端（最新月）へ
     if(!keepScroll){
       elems.scroller.scrollLeft = elems.scroller.scrollWidth - elems.scroller.clientWidth;
     }else{
@@ -675,12 +696,10 @@ body{
     }
   }
 
-  /* ===== タップで近い点→tooltip（スクロール阻害しない） ===== */
   function attachTapToShowTooltip(elems){
     let downX=0, downY=0, moved=false;
 
     const onDown = (e)=>{
-      elems.dragging = true;
       const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
       downX=p.clientX; downY=p.clientY;
       moved=false;
@@ -690,7 +709,6 @@ body{
       if(Math.abs(p.clientX-downX)>6 || Math.abs(p.clientY-downY)>6) moved=true;
     };
     const onUp = (e)=>{
-      elems.dragging = false;
       if(moved) return;
 
       const svg = elems.mount.querySelector("svg");
@@ -737,14 +755,13 @@ body{
     elems.scroller.addEventListener("touchend",   onUp,   {passive:true});
   }
 
-  /* ===== スクロール終了後に縦軸を更新（スクロール中は邪魔しない） ===== */
   function attachEndRedraw(elems, mode){
     let timer = 0;
     const fire = ()=>{
       clearTimeout(timer);
       timer = setTimeout(()=>{
         renderChartInto(elems, mode, {keepScroll:true});
-      }, 120);
+      }, 140);
     };
     elems.scroller.addEventListener("scroll", fire, {passive:true});
   }
@@ -752,29 +769,33 @@ body{
   attachEndRedraw(A, "orders");
   attachEndRedraw(B, "assets");
 
-  /* ===== 初期描画 ===== */
   renderChartInto(A, "orders", {keepScroll:false});
   renderChartInto(B, "assets", {keepScroll:false});
   attachTapToShowTooltip(A);
   attachTapToShowTooltip(B);
 
-  /* ===== 切替（チャート部分を触っても切替しない） ===== */
+  /* ===== 切替（ゆっくり＋モザイク） ===== */
+  const ANIM_MS = 650; // ★ゆっくり
+
   function flip(){
     isFlipped = !isFlipped;
     cardChart.classList.add("is-animating");
     cardChart.classList.toggle("is-flipped", isFlipped);
-    setTimeout(()=> cardChart.classList.remove("is-animating"), 280);
+    setTimeout(()=> cardChart.classList.remove("is-animating"), ANIM_MS);
   }
 
-  // 「グラフ領域」は flip させない（スクロール最優先）
+  // ★「グラフ操作領域（chartScroller）だけ」は flip させない
+  // ＝カード内の “グラフ以外” は全部タップで切替
   cardChart.addEventListener("click", (e)=>{
-    if(e.target.closest(".chartWrap")) return;
+    if(e.target.closest(".chartScroller")) return;
     flip();
   });
+
+  // ヒントクリックでも切替（保険）
   flipHintA.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
   flipHintB.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
 
-  /* ===== 以下：カレンダー＆テーブル（元のまま） ===== */
+  /* ===== 以下：カレンダー＆テーブル（そのまま） ===== */
   const calMonthLabel = document.getElementById("calMonthLabel");
   const calTitle = document.getElementById("calTitle");
   const calGrid = document.getElementById("calGrid");
