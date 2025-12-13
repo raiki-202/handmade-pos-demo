@@ -514,6 +514,7 @@
 
     /* ===== 1) 折れ線グラフ（ダミー） ===== */
     const chartMount = document.getElementById("chartMount");
+    const chartScroller = document.querySelector(".chartScroller"); // ← 追加
     const chartTitle = document.getElementById("chartTitle");
     const metricLabel = document.getElementById("metricLabel");
     const metricValue = document.getElementById("metricValue");
@@ -532,79 +533,84 @@
       return "¥" + Math.round(n).toLocaleString("ja-JP");
     }
 
-    function renderChart(){
-      const isOrders = mode==="orders";
-      const series = isOrders ? orders : assets;
-      const unitStep = isOrders ? 10 : 100000;
-      const max = niceMax(Math.max(...series), unitStep);
+function renderChart(){
+  const isOrders = mode==="orders";
+  const series = isOrders ? orders : assets;
 
-      const latest = series[series.length - 1];
-      chartTitle.textContent = isOrders ? "受注件数の推移" : "総資産の推移";
-      metricLabel.textContent = isOrders ? "受注件数" : "総資産";
-      metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
+  const unitStep = isOrders ? 10 : 100000;
+  const max = niceMax(Math.max(...series), unitStep);
 
-      const M = 4;
-      const start = Math.max(0, series.length - M);
-      const xLabels = months.slice(start);
-      const yData = series.slice(start);
+  const latest = series[series.length - 1];
+  chartTitle.textContent = isOrders ? "受注件数の推移" : "総資産の推移";
+  metricLabel.textContent = isOrders ? "受注件数" : "総資産";
+  metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
 
-      const W = 640, H = 220;
-      const padL = 42, padR = 16, padT = 14, padB = 42;
-      const innerW = W - padL - padR;
-      const innerH = H - padT - padB;
+  const N = series.length;        // ← 12ヶ月ぜんぶ描画
+  const xStep = 96;               // ← ここで「4ヶ月の見え具合」を調整（iPhone向け）
+  const W = 42 + 16 + xStep*(N-1);
+  const H = 220;
 
-      const xStep = innerW / (M - 1);
+  const padL = 42, padR = 16, padT = 14, padB = 42;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
 
-      const pts = yData.map((y, i)=>{
-        const x = padL + i * xStep;
-        const yNorm = (y / max);
-        const py = padT + (1 - yNorm) * innerH;
-        return {x, y: py, v: y};
-      });
+  // 右端まで横スクロールできるように、描画領域(div)の幅も合わせる
+  chartMount.style.width = `${W}px`;
 
-      const path = pts.map((p,i)=> (i===0?`M ${p.x},${p.y}`:`L ${p.x},${p.y}`)).join(" ");
+  const pts = series.map((y, i)=>{
+    const x = padL + i * xStep;
+    const yNorm = (y / max);
+    const py = padT + (1 - yNorm) * innerH;
+    return {x, y: py, v: y};
+  });
 
-      const gridYs = [0, max/2, max].map(v=>{
-        const yNorm = v / max;
-        return padT + (1 - yNorm) * innerH;
-      });
+  const path = pts.map((p,i)=> (i===0?`M ${p.x},${p.y}`:`L ${p.x},${p.y}`)).join(" ");
 
-      const labelFor = (v)=> {
-        if(isOrders) return `${v}`;
-        return `${Math.round(v/10000)}万`;
-      };
+  const gridYs = [0, max/2, max].map(v=>{
+    const yNorm = v / max;
+    return padT + (1 - yNorm) * innerH;
+  });
 
-      chartMount.innerHTML = `
-        <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block; border-radius:14px;">
-          <defs>
-            <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="rgba(225,138,106,.32)"></stop>
-              <stop offset="100%" stop-color="rgba(225,138,106,0)"></stop>
-            </linearGradient>
-          </defs>
+  const labelFor = (v)=> {
+    if(isOrders) return `${v}`;
+    return `${Math.round(v/10000)}万`;
+  };
 
-          ${gridYs.map((y,idx)=>`
-            <line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="rgba(0,0,0,.10)" stroke-width="1" />
-            <text x="${padL-8}" y="${y+4}" text-anchor="end" font-size="11" fill="rgba(34,34,34,.55)" font-weight="900">
-              ${labelFor(idx===0?0:(idx===1?max/2:max))}
-            </text>
-          `).join("")}
+  chartMount.innerHTML = `
+    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block; border-radius:14px;">
+      <defs>
+        <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(225,138,106,.32)"></stop>
+          <stop offset="100%" stop-color="rgba(225,138,106,0)"></stop>
+        </linearGradient>
+      </defs>
 
-          <path d="${path} L ${pts[pts.length-1].x},${padT+innerH} L ${pts[0].x},${padT+innerH} Z" fill="url(#g1)"></path>
+      ${gridYs.map((y,idx)=>`
+        <line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="rgba(0,0,0,.10)" stroke-width="1" />
+        <text x="${padL-8}" y="${y+4}" text-anchor="end" font-size="11" fill="rgba(34,34,34,.55)" font-weight="900">
+          ${labelFor(idx===0?0:(idx===1?max/2:max))}
+        </text>
+      `).join("")}
 
-          <path d="${path}" fill="none" stroke="rgba(225,138,106,.95)" stroke-width="3" stroke-linecap="round"></path>
+      <path d="${path} L ${pts[pts.length-1].x},${padT+innerH} L ${pts[0].x},${padT+innerH} Z" fill="url(#g1)"></path>
+      <path d="${path}" fill="none" stroke="rgba(225,138,106,.95)" stroke-width="3" stroke-linecap="round"></path>
 
-          ${pts.map(p=>`
-            <circle cx="${p.x}" cy="${p.y}" r="5" fill="rgba(255,255,255,.95)" stroke="rgba(34,34,34,.28)" stroke-width="2"></circle>
-          `).join("")}
+      ${pts.map(p=>`
+        <circle cx="${p.x}" cy="${p.y}" r="5" fill="rgba(255,255,255,.95)" stroke="rgba(34,34,34,.28)" stroke-width="2"></circle>
+      `).join("")}
 
-          ${xLabels.map((m,i)=>`
-            <text x="${padL + i*xStep}" y="${H-18}" text-anchor="middle" font-size="12"
-                  fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
-          `).join("")}
-        </svg>
-      `;
-    }
+      ${months.map((m,i)=>`
+        <text x="${padL + i*xStep}" y="${H-18}" text-anchor="middle" font-size="12"
+              fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
+      `).join("")}
+    </svg>
+  `;
+
+  // ✅ 初期表示を「最新(右端)」にする
+  requestAnimationFrame(()=>{
+    chartScroller.scrollLeft = chartScroller.scrollWidth;
+  });
+}
 
     document.getElementById("card-chart").addEventListener("click", ()=>{
       mode = (mode==="orders") ? "assets" : "orders";
