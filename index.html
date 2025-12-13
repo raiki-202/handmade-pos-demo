@@ -33,7 +33,6 @@
 }
 
 *{ box-sizing:border-box; }
-
 html, body{ height:100%; }
 
 body{
@@ -111,7 +110,6 @@ body{
 
 .cardFace{
   grid-area: 1 / 1;
-  backface-constiveness:hidden;
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
   background: linear-gradient(180deg,var(--glass-bg),var(--glass-bg2));
@@ -119,7 +117,6 @@ body{
   height: 100%;
   overflow: hidden;
 }
-
 .cardFace.front{ transform:rotateY(0deg) translateZ(0); }
 .cardFace.back { transform:rotateY(180deg) translateZ(0); }
 
@@ -137,18 +134,9 @@ body{
 .badgeBig .v{ font-size:18px; font-weight:900; }
 
 /* ===== chart ===== */
-/* ===== SVG上でも横スクロール優先（iOS対策） ===== */
-.chartScroller svg{
-  touch-action: pan-x;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-/* 点はタップ対象って分かるように（PC） */
-.chartPoint{ cursor: pointer; }
 .chartWrap{
   padding:12px 0;
-  overflow: hidden;
+  overflow:hidden;
 }
 .chartFrame{ position:relative; padding:0 12px 10px; }
 
@@ -159,15 +147,31 @@ body{
   z-index:2;
 }
 
-/* スクロール領域（ここを触っても flip しない） */
+/* スクロール領域 */
 .chartScroller{
-  overflow-x:auto; overflow-y:hidden;
+  overflow-x:auto;
+  overflow-y:hidden;
   -webkit-overflow-scrolling:touch;
   touch-action: pan-x;
-  overscroll-behavior: contain;
 }
 
-.chartInner{ padding-left:42px; }
+/* 左余白（Y軸固定分） */
+.chartInner{
+  padding-left:42px;
+  display:inline-block;     /* ★ これ追加：中身の幅で伸びる */
+}
+/* mountも幅で伸びるように */
+.chartMount{
+  display:inline-block;     /* ★ これ追加 */
+}
+
+/* svgはブロック化（幅計算が安定） */
+.chartMount svg{
+  display:block;            /* ★ これ追加 */
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
 
 .hint{ padding:0 14px 14px; font-size:12px; color:rgba(34,34,34,.55); }
 .tapHint{
@@ -180,19 +184,10 @@ body{
   -webkit-user-select:none;
 }
 
-/* ===== ★ tooltip（追加） ===== */
-.chartTooltip{
-  pointer-events:none;
-}
-.chartTooltip rect{
-  fill: rgba(34,34,34,.92);
-  rx:8;
-}
-.chartTooltip text{
-  fill:#fff;
-  font-size:12px;
-  font-weight:900;
-}
+/* ===== tooltip（SVG内） ===== */
+.chartTooltip{ pointer-events:none; }
+.chartTooltip rect{ fill: rgba(34,34,34,.92); rx:8; }
+.chartTooltip text{ fill:#fff; font-size:12px; font-weight:900; }
 
 /* ===== calendar ===== */
 .calendar{ padding:12px; }
@@ -202,21 +197,18 @@ body{
   border:1px solid rgba(0,0,0,.08);
   background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.52));
 }
-
 .calBg{
   position:absolute; inset:0;
   background:
     radial-gradient(600px 360px at 20% 20%, rgba(255,255,255,.55), transparent 60%),
     radial-gradient(600px 420px at 80% 30%, rgba(225,138,106,.22), transparent 60%);
 }
-
 .calGlass{
   position:relative;
   padding:10px;
   backdrop-filter:blur(10px);
   -webkit-backdrop-filter:blur(10px);
 }
-
 .calTop{ display:flex; justify-content:space-between; padding:6px 4px 10px; font-weight:900; }
 
 .calGrid{
@@ -227,11 +219,9 @@ body{
   border-radius:12px;
   overflow:hidden;
 }
-
 .dow,.day{ min-height:46px; padding:6px; font-size:12px; background:rgba(255,255,255,.45); }
 .dow{ text-align:center; font-weight:900; background:rgba(255,255,255,.65); }
 .day{ position:relative; }
-
 .num{ position:absolute; top:6px; left:6px; font-weight:900; }
 
 .pill{
@@ -260,7 +250,6 @@ body{
   touch-action: pan-x pan-y;
   border-radius:14px;
 }
-
 .table{
   width:100%; min-width:520px;
   border-collapse:separate; border-spacing:0;
@@ -268,7 +257,6 @@ body{
   border:1px solid rgba(0,0,0,.08);
   background:rgba(255,255,255,.55);
 }
-
 .thead th{
   position:sticky; top:0;
   padding:10px;
@@ -276,11 +264,7 @@ body{
   background:rgba(255,255,255,.7);
   z-index:1;
 }
-
-.row td{
-  padding:10px;
-  border-bottom:1px solid rgba(0,0,0,.06);
-}
+.row td{ padding:10px; border-bottom:1px solid rgba(0,0,0,.06); }
 
 .status{
   display:inline-flex; gap:8px; align-items:center;
@@ -289,14 +273,12 @@ body{
   font-size:12px; font-weight:900;
   background:rgba(255,255,255,.68);
 }
-
 .dot{ width:10px; height:10px; border-radius:999px; }
 .st-doing .dot{ background:var(--ok); }
 .st-wait  .dot{ background:var(--wait); }
 .st-done  .dot{ background:var(--done); }
 .st-todo  .dot{ background:var(--todo); }
 
-/* motion軽減 */
 @media (prefers-reduced-motion: reduce){
   .cardFlipInner{ transition:none; }
 }
@@ -317,8 +299,8 @@ body{
     <main id="view-home" class="grid">
 
       <!-- 1) グラフ（flip） -->
-      <section class="card cardFlip" id="card-chart">
-        <div class="cardFlipInner" id="cardFlipInner">
+      <section class="card cardFlip" id="card-chart" title="タップで切替">
+        <div class="cardFlipInner">
 
           <!-- FRONT -->
           <div class="cardFace front">
@@ -337,7 +319,9 @@ body{
               <div class="chartFrame">
                 <div class="yAxisFixed" id="yAxisFixedA"></div>
                 <div class="chartScroller" id="chartScrollerA">
-                  <div class="chartInner" id="chartMountA"></div>
+                  <div class="chartInner">
+                    <div class="chartMount" id="chartMountA"></div>
+                  </div>
                 </div>
               </div>
               <div class="hint">
@@ -363,7 +347,9 @@ body{
               <div class="chartFrame">
                 <div class="yAxisFixed" id="yAxisFixedB"></div>
                 <div class="chartScroller" id="chartScrollerB">
-                  <div class="chartInner" id="chartMountB"></div>
+                  <div class="chartInner">
+                    <div class="chartMount" id="chartMountB"></div>
+                  </div>
                 </div>
               </div>
               <div class="hint">
@@ -485,39 +471,35 @@ body{
   const orders = [3,6,9,7,8,12,10,14,9,6,11,15];
   const assets = [80000,120000,150000,180000,210000,190000,240000,260000,300000,280000,320000,360000];
 
+  const formatJPY = n => "¥" + Math.round(n).toLocaleString("ja-JP");
+  const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
+  const down5 = v => Math.floor(v/5)*5;
+  const up5   = v => Math.ceil(v/5)*5;
+
   /* ===== flip要素 ===== */
   const cardChart = document.getElementById("card-chart");
   const flipHintA = document.getElementById("flipHintA");
   const flipHintB = document.getElementById("flipHintB");
 
-  /* ===== FRONT elems ===== */
   const A = {
-    chartMount: document.getElementById("chartMountA"),
-    yAxisFixed: document.getElementById("yAxisFixedA"),
-    scroller:   document.getElementById("chartScrollerA"),
-    title:      document.getElementById("chartTitleA"),
-    metricLabel:document.getElementById("metricLabelA"),
-    metricValue:document.getElementById("metricValueA"),
+    mount: document.getElementById("chartMountA"),
+    yAxis: document.getElementById("yAxisFixedA"),
+    scroller: document.getElementById("chartScrollerA"),
+    metricValue: document.getElementById("metricValueA"),
+    dragging:false,
+    _pts:[]
   };
-
-  /* ===== BACK elems ===== */
   const B = {
-    chartMount: document.getElementById("chartMountB"),
-    yAxisFixed: document.getElementById("yAxisFixedB"),
-    scroller:   document.getElementById("chartScrollerB"),
-    title:      document.getElementById("chartTitleB"),
-    metricLabel:document.getElementById("metricLabelB"),
-    metricValue:document.getElementById("metricValueB"),
+    mount: document.getElementById("chartMountB"),
+    yAxis: document.getElementById("yAxisFixedB"),
+    scroller: document.getElementById("chartScrollerB"),
+    metricValue: document.getElementById("metricValueB"),
+    dragging:false,
+    _pts:[]
   };
 
-  let isFlipped = false;      // false=front(A), true=back(B)
+  let isFlipped = false;
   let rafA = 0, rafB = 0;
-
-  /* ===== utils ===== */
-  const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
-  const formatJPY = n => "¥" + Math.round(n).toLocaleString("ja-JP");
-  const down5 = v => Math.floor(v/5)*5;
-  const up5   = v => Math.ceil(v/5)*5;
 
   function getVisibleRange(scroller, {padL,xStep,N}){
     const sl = scroller.scrollLeft;
@@ -543,10 +525,9 @@ body{
       maxS = up5(maxS);
       if(maxS - minS < 20) maxS = minS + 20;
       if(maxS === minS) maxS = minS + 20;
-      return {minS,maxS}; // ordersは従来通り
+      return {minS,maxS};
     }else{
-      // ★ 総資産は「5万刻み」に揃える
-      const base = 50000; // 5万
+      const base = 50000; // 5万刻み
       minS = Math.floor(minS/base)*base;
       maxS = Math.ceil (maxS/base)*base;
 
@@ -554,7 +535,6 @@ body{
       if(step < base) step = base;
 
       maxS = minS + step*4;
-
       return {minS,maxS,step};
     }
   }
@@ -576,7 +556,7 @@ body{
   }
 
   function renderYAxis(elems, {ticks,yToPx,H,isOrders}){
-    elems.yAxisFixed.innerHTML = `
+    elems.yAxis.innerHTML = `
       <svg width="42" height="${H}">
         ${ticks.map(v=>{
           const y=yToPx(v);
@@ -589,7 +569,7 @@ body{
     `;
   }
 
-  /* ===== ★ tooltip utils（追加） ===== */
+  /* ===== tooltip ===== */
   function removeTooltip(svg){
     const old = svg.querySelector(".chartTooltip");
     if(old) old.remove();
@@ -604,17 +584,15 @@ body{
 
     const t = document.createElementNS(ns, "text");
     t.textContent = text;
+    t.setAttribute("text-anchor","middle");
     t.setAttribute("x", x);
     t.setAttribute("y", y - 14);
-    t.setAttribute("text-anchor","middle");
 
-    // 一旦入れて bbox 測る
     g.appendChild(t);
     svg.appendChild(g);
 
     const bbox = t.getBBox();
-    const padX = 10;
-    const padY = 6;
+    const padX = 10, padY = 6;
 
     const r = document.createElementNS(ns, "rect");
     r.setAttribute("x", bbox.x - padX);
@@ -637,7 +615,7 @@ body{
     const innerH=H-padT-padB;
     const W=16 + xStep*(N-1) + padR;
 
-    elems.chartMount.style.width = `${42+W}px`;
+    // ★ keepScroll=true の時は scrollLeft を触らない（ここが肝）
     const prevSL = elems.scroller.scrollLeft;
 
     const [i0,i1] = getVisibleRange(elems.scroller, {padL:42, xStep, N});
@@ -646,8 +624,6 @@ body{
     const {minS,maxS} = scale;
 
     const latest=series[N-1];
-    elems.title.textContent       = isOrders ? "受注件数の推移" : "総資産の推移";
-    elems.metricLabel.textContent = isOrders ? "受注件数" : "総資産";
     elems.metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
 
     const denom = (maxS - minS) || 1;
@@ -655,11 +631,12 @@ body{
 
     renderYAxis(elems, {ticks,yToPx,H,isOrders});
 
-    const pts = series.map((v,i)=>({x:42+i*xStep, y:yToPx(v)}));
+    const pts = series.map((v,i)=>({x:42+i*xStep, y:yToPx(v), v}));
+
     const path = pts.map((p,i)=> i ? `L ${p.x},${p.y}` : `M ${p.x},${p.y}`).join(" ");
 
-    elems.chartMount.innerHTML = `
-      <svg width="${42+W}" height="${H}">
+    elems.mount.innerHTML = `
+      <svg width="${42+W}" height="${H}" viewBox="0 0 ${42+W} ${H}">
         ${ticks.map(v=>{
           const y=yToPx(v);
           return `<line x1="42" y1="${y}" x2="${42+W-padR}" y2="${y}" stroke="rgba(0,0,0,.10)"/>`;
@@ -671,20 +648,10 @@ body{
         <path d="${path}" fill="none" stroke="rgba(225,138,106,.95)"
               stroke-width="3" stroke-linecap="round"/>
 
-        ${pts.map((p,i)=>{
-          const val = series[i];
-          const label = isOrders ? `${val}件` : formatJPY(val);
-          return `
-            <circle cx="${p.x}" cy="${p.y}" r="6"
-              fill="rgba(255,255,255,.95)"
-              stroke="rgba(34,34,34,.28)"
-              stroke-width="2"
-              data-x="${p.x}"
-              data-y="${p.y}"
-              data-label="${label}"
-              class="chartPoint"/>
-          `;
-        }).join("")}
+        ${pts.map(p=>`
+          <circle cx="${p.x}" cy="${p.y}" r="6"
+            fill="rgba(255,255,255,.95)" stroke="rgba(34,34,34,.28)" stroke-width="2"/>
+        `).join("")}
 
         ${months.map((m,i)=>`
           <text x="${42+i*xStep}" y="${H-18}" text-anchor="middle"
@@ -693,68 +660,103 @@ body{
       </svg>
     `;
 
-    // ★ 点タップでtooltip（iPhone対応：pointerup/touchend）
-const svg = elems.chartMount.querySelector("svg");
+    elems._pts = pts.map(p=>({
+      x:p.x, y:p.y,
+      label: isOrders ? `${p.v}件` : formatJPY(p.v)
+    }));
 
-// iOSで横スクロールを邪魔しない宣言（保険）
-svg.style.touchAction = "pan-x";
-
-const handleTip = (e)=>{
-  const target = e.target;
-
-  if(target?.classList?.contains("chartPoint")){
-    // 点タップ時だけ “タップとして確定”
-    // （スクロール中は通常 target が点になりにくい）
-    if(e.type === "touchend") e.preventDefault();
-
-    const x = Number(target.dataset.x);
-    const y = Number(target.dataset.y);
-    const label = target.dataset.label;
-    showTooltip(svg, x, y, label);
-  }else{
-    removeTooltip(svg);
-  }
-};
-
-// PC / Android / iOS（新しめ）
-svg.addEventListener("pointerup", handleTip);
-
-// iPhone Safari（保険）
-svg.addEventListener("touchend", handleTip, {passive:false});
-
-// PC（既存互換）
-svg.addEventListener("click", handleTip);
-
-    elems.scroller.scrollLeft = keepScroll ? prevSL : elems.scroller.scrollWidth;
+    // ★ 初回だけ右端に寄せる（以後は触らない）
+    if(!keepScroll){
+     elems.scroller.scrollLeft = elems.scroller.scrollWidth - elems.scroller.clientWidth;
+    }else{
+      // 触らない（prevSLも戻さない）
+      // elems.scroller.scrollLeft = prevSL; ←これがスクロール殺してた
+    }
   }
 
-  /* ===== スクロール追従（面ごと） ===== */
-  A.scroller.addEventListener("scroll", ()=>{
-    if(rafA) return;
-    rafA = requestAnimationFrame(()=>{
-      rafA=0;
-      if(!isFlipped) renderChartInto(A, "orders", {keepScroll:true});
-    });
-  });
+  /* ===== タップで近い点→tooltip ===== */
+  function attachTapToShowTooltip(elems){
+    let downX=0, downY=0, moved=false;
 
-  B.scroller.addEventListener("scroll", ()=>{
-    if(rafB) return;
-    rafB = requestAnimationFrame(()=>{
-      rafB=0;
-      if(isFlipped) renderChartInto(B, "assets", {keepScroll:true});
-    });
-  });
+    const onDown = (e)=>{
+      elems.dragging = true;
+      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      downX=p.clientX; downY=p.clientY;
+      moved=false;
+    };
+    const onMove = (e)=>{
+      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      if(Math.abs(p.clientX-downX)>6 || Math.abs(p.clientY-downY)>6) moved=true;
+    };
+    const onUp = (e)=>{
+      elems.dragging = false;
+      if(moved) return;
 
-  /* ★ ここ重要：スクロール操作が flip に伝播しない */
-  [A.scroller, B.scroller].forEach(el=>{
-    el.addEventListener("click", (e)=> e.stopPropagation(), {passive:true});
-    el.addEventListener("pointerdown", (e)=> e.stopPropagation(), {passive:true});
-    el.addEventListener("touchstart", (e)=> e.stopPropagation(), {passive:true});
-  });
+      const svg = elems.mount.querySelector("svg");
+      if(!svg) return;
 
-  /* ===== 初期描画（両面先に作る） ===== */
+      const rect = svg.getBoundingClientRect();
+      const p = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : e;
+      const x = p.clientX - rect.left;
+      const y = p.clientY - rect.top;
+
+      if(x<0 || y<0 || x>rect.width || y>rect.height){
+        removeTooltip(svg);
+        return;
+      }
+
+      const vb = svg.viewBox.baseVal;
+      const sx = vb.width / rect.width;
+      const sy = vb.height / rect.height;
+      const vx = x * sx;
+      const vy = y * sy;
+
+      const pts = elems._pts || [];
+      let best=null, bestD=1e9;
+      for(const pt of pts){
+        const dx=pt.x-vx, dy=pt.y-vy;
+        const d2=dx*dx+dy*dy;
+        if(d2<bestD){bestD=d2; best=pt;}
+      }
+
+      const threshold = 14*14;
+      if(best && bestD<=threshold){
+        showTooltip(svg, best.x, best.y, best.label);
+      }else{
+        removeTooltip(svg);
+      }
+    };
+
+    elems.scroller.addEventListener("pointerdown", onDown, {passive:true});
+    elems.scroller.addEventListener("pointermove", onMove, {passive:true});
+    elems.scroller.addEventListener("pointerup",   onUp,   {passive:true});
+
+    // iPhone保険
+    elems.scroller.addEventListener("touchstart", onDown, {passive:true});
+    elems.scroller.addEventListener("touchmove",  onMove, {passive:true});
+    elems.scroller.addEventListener("touchend",   onUp,   {passive:true});
+  }
+/* ===== スクロール中は再描画しない（離した後に1回だけ） ===== */
+function attachEndRedraw(elems, mode){
+  let timer = 0;
+  const fire = ()=>{
+    clearTimeout(timer);
+    timer = setTimeout(()=>{
+      renderChartInto(elems, mode, {keepScroll:true});
+    }, 120);
+  };
+  elems.scroller.addEventListener("pointerup", fire, {passive:true});
+  elems.scroller.addEventListener("touchend",  fire, {passive:true});
+}
+
+attachEndRedraw(A, "orders");
+attachEndRedraw(B, "assets");
+
+  /* ===== 初期描画 ===== */
   renderChartInto(A, "orders", {keepScroll:false});
   renderChartInto(B, "assets", {keepScroll:false});
+  attachTapToShowTooltip(A);
+  attachTapToShowTooltip(B);
 
   /* ===== flip ===== */
   function flip(){
@@ -762,11 +764,15 @@ svg.addEventListener("click", handleTip);
     cardChart.classList.toggle("is-flipped", isFlipped);
   }
 
-  cardChart.addEventListener("click", flip);
+  // スクロール領域内クリックはflipしない
+  cardChart.addEventListener("click", (e)=>{
+    if(e.target.closest(".chartScroller")) return;
+    flip();
+  });
   flipHintA.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
   flipHintB.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
 
-  /* ===== カレンダー描画 ===== */
+  /* ===== 以下：カレンダー＆テーブル（元のまま） ===== */
   const calMonthLabel = document.getElementById("calMonthLabel");
   const calTitle = document.getElementById("calTitle");
   const calGrid = document.getElementById("calGrid");
@@ -808,7 +814,6 @@ svg.addEventListener("click", handleTip);
     }
   }
 
-  /* ===== テーブル描画（stock / order） ===== */
   const stockBody = document.getElementById("stockBody");
   const orderBody = document.getElementById("orderBody");
 
