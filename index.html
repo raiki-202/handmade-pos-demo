@@ -49,28 +49,6 @@
       margin: 0 auto;
     }
 
-        /* chart: 縦スクロールは無効、横だけ */
-    .chartScroller{
-    overflow-x:auto;
-    overflow-y:hidden;
-    }
-
-    /* タップ切替の回転アニメ */
-    #card-chart.flip{
-    animation: flipSpin .55s ease;
-    transform-origin: center;
-    }
-    @keyframes flipSpin{
-    0%   { transform: rotateY(0deg); }
-    50%  { transform: rotateY(90deg); }
-    100% { transform: rotateY(180deg); }
-    }
-
-    /* motionが苦手な人向け */
-    @media (prefers-reduced-motion: reduce){
-    #card-chart.flip{ animation: none; }
-    }
-
     /* top switch */
     .topbar{
       display:flex; align-items:center; justify-content:space-between;
@@ -102,6 +80,7 @@
       border-radius: 999px;
       font-weight: 800;
       letter-spacing: .02em;
+      cursor: pointer;
     }
     .tab.active{
       background: rgba(255,255,255,.80);
@@ -172,12 +151,14 @@
     .chartWrap{ padding: 12px 0 12px; }
     .chartScroller{
       overflow-x:auto;
+      overflow-y:hidden;              /* 縦スクロール無効 */
       -webkit-overflow-scrolling: touch;
       padding: 0 12px 10px;
+      overscroll-behavior: contain;
     }
     .chartInner{
-      width: 640px;
-      min-width: 640px;
+      width: auto;                    /* ← 固定640を撤去 */
+      min-width: 0;
     }
     .hint{
       padding: 0 14px 14px;
@@ -190,6 +171,20 @@
       background: rgba(255,255,255,.62);
       border:1px solid rgba(0,0,0,.06);
       border-radius: 999px;
+    }
+
+    /* タップ切替の回転アニメ */
+    #card-chart.flip{
+      animation: flipSpin .55s ease;
+      transform-origin: center;
+    }
+    @keyframes flipSpin{
+      0%   { transform: rotateY(0deg); }
+      50%  { transform: rotateY(90deg); }
+      100% { transform: rotateY(180deg); }
+    }
+    @media (prefers-reduced-motion: reduce){
+      #card-chart.flip{ animation: none; }
     }
 
     /* calendar */
@@ -226,37 +221,35 @@
       font-size: 14px;
       letter-spacing:.04em;
     }
+
     /* ===== iPhone崩れ対策：calendar grid 修正版 ===== */
-.calGrid{
-  display:grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 1px; /* ← 罫線代わり */
-  background: rgba(0,0,0,.08);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.dow, .day{
-  border: 0; /* ← borderは全部消す */
-  min-height: 46px;
-  padding: 6px 6px;
-  font-size: 12px;
-  color: rgba(34,34,34,.70);
-  background: rgba(255,255,255,.45);
-}
-
-.dow{
-  min-height: auto;
-  text-align: center;
-  font-weight: 900;
-  letter-spacing: .04em;
-  background: rgba(255,255,255,.65);
-}
-
-.day{
-  position: relative;
-  background: rgba(255,255,255,.40);
-}
+    .calGrid{
+      display:grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 1px;
+      background: rgba(0,0,0,.08);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .dow, .day{
+      border: 0;
+      min-height: 46px;
+      padding: 6px 6px;
+      font-size: 12px;
+      color: rgba(34,34,34,.70);
+      background: rgba(255,255,255,.45);
+    }
+    .dow{
+      min-height: auto;
+      text-align: center;
+      font-weight: 900;
+      letter-spacing: .04em;
+      background: rgba(255,255,255,.65);
+    }
+    .day{
+      position: relative;
+      background: rgba(255,255,255,.40);
+    }
     .num{
       position:absolute;
       top:6px; left:6px;
@@ -264,8 +257,6 @@
       color: rgba(34,34,34,.78);
       font-weight: 900;
     }
-
-    /* event pill */
     .pill{
       margin-top: 18px;
       display:inline-block;
@@ -348,7 +339,6 @@
       color: rgba(34,34,34,.60);
       margin-top: 2px;
     }
-
     .status{
       display:inline-flex; align-items:center; gap:8px;
       padding: 6px 10px;
@@ -384,7 +374,6 @@
       white-space:nowrap;
     }
 
-    /* iPhone縦の見やすさ優先：表は横スクロールOKに */
     .tableWrap{
       overflow:auto;
       -webkit-overflow-scrolling: touch;
@@ -407,12 +396,12 @@
     <!-- HOME -->
     <main id="view-home" class="grid">
 
-      <!-- 1) 折れ線グラフ枠 -->
+      <!-- 1) 棒グラフ枠 -->
       <section class="card" id="card-chart">
         <div class="cardHead">
           <div class="title">
             <div class="h" id="chartTitle">受注件数の推移</div>
-            <div class="s">横スクロール：過去1年分（後で12Mに拡張）</div>
+            <div class="s">横スクロール：過去1年分（表示中範囲で縦軸が自動調整）</div>
           </div>
           <div class="badgeBig">
             <div class="k" id="metricLabel">受注件数</div>
@@ -425,7 +414,7 @@
             <div class="chartInner" id="chartMount"></div>
           </div>
           <div class="hint">
-            <span class="tapHint">👆 グラフをタップで「総資産の推移」に切替</span>
+            <span class="tapHint">👆 タップで「総資産の推移」に切替（回転）</span>
           </div>
         </div>
       </section>
@@ -549,112 +538,134 @@
     let rafScroll = 0;
 
     function formatJPY(n){
-    return "¥" + Math.round(n).toLocaleString("ja-JP");
+      return "¥" + Math.round(n).toLocaleString("ja-JP");
     }
     function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
 
     function getVisibleRange({ padL, xStep, N }){
-    const sl = chartScroller.scrollLeft;
-    const vw = chartScroller.clientWidth;
-    const start = Math.floor((sl - padL) / xStep);
-    const end   = Math.ceil(((sl + vw) - padL) / xStep);
-    return [clamp(start,0,N-1), clamp(end,0,N-1)];
+      const sl = chartScroller.scrollLeft;
+      const vw = chartScroller.clientWidth;
+      const start = Math.floor((sl - padL) / xStep);
+      const end   = Math.ceil(((sl + vw) - padL) / xStep);
+      return [clamp(start,0,N-1), clamp(end,0,N-1)];
     }
 
     function computeScale(series, i0, i1, isOrders){
-    const slice = series.slice(i0, i1 + 1);
-    let minV = Math.min(...slice);
-    let maxV = Math.max(...slice);
-    if(minV === maxV){
+      const slice = series.slice(i0, i1 + 1);
+      let minV = Math.min(...slice);
+      let maxV = Math.max(...slice);
+
+      if(minV === maxV){
         minV -= isOrders ? 1 : 20000;
         maxV += isOrders ? 1 : 20000;
-    }
-    const range = maxV - minV;
-    const pad = range * 0.12;
-    let minS = minV - pad;
-    let maxS = maxV + pad;
-    if(isOrders){
+      }
+
+      const range = maxV - minV;
+      const pad = range * 0.12; // 余白（上下の盛り具合）
+      let minS = minV - pad;
+      let maxS = maxV + pad;
+
+      if(isOrders){
         minS = Math.max(0, Math.floor(minS));
         maxS = Math.ceil(maxS);
-    }else{
+      }else{
         minS = Math.floor(minS / 10000) * 10000;
         maxS = Math.ceil(maxS / 10000) * 10000;
-    }
-    return { minS, maxS };
+      }
+
+      // 念のため
+      if(maxS <= minS) maxS = minS + (isOrders ? 2 : 20000);
+
+      return { minS, maxS };
     }
 
     function labelFor(v,isOrders){
-    return isOrders ? Math.round(v) : `${Math.round(v/10000)}万`;
+      return isOrders ? `${Math.round(v)}` : `${Math.round(v/10000)}万`;
     }
 
     function renderChart({ keepScroll=true } = {}){
-    const isOrders = mode==="orders";
-    const series = isOrders ? orders : assets;
+      const isOrders = mode==="orders";
+      const series = isOrders ? orders : assets;
 
-    const N = series.length;
-    const xStep = 96;
-    const W = 42 + 16 + xStep*(N-1);
-    const H = 220;
+      const N = series.length;
+      const xStep = 96;
+      const W = 42 + 16 + xStep*(N-1);
+      const H = 220;
 
-    const padL=42, padR=16, padT=14, padB=42;
-    const innerH = H - padT - padB;
+      const padL=42, padR=16, padT=14, padB=42;
+      const innerH = H - padT - padB;
 
-    chartMount.style.width = `${W}px`;
-    const prevSL = chartScroller.scrollLeft;
+      chartMount.style.width = `${W}px`;
+      const prevSL = chartScroller.scrollLeft;
 
-    const [i0,i1] = getVisibleRange({ padL, xStep, N });
-    const { minS, maxS } = computeScale(series,i0,i1,isOrders);
+      const [i0,i1] = getVisibleRange({ padL, xStep, N });
+      const { minS, maxS } = computeScale(series,i0,i1,isOrders);
+      const midS = (minS + maxS) / 2;
 
-    const latest = series[N-1];
-    chartTitle.textContent = isOrders ? "受注件数の推移" : "総資産の推移";
-    metricLabel.textContent = isOrders ? "受注件数" : "総資産";
-    metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
+      const latest = series[N-1];
+      chartTitle.textContent = isOrders ? "受注件数の推移" : "総資産の推移";
+      metricLabel.textContent = isOrders ? "受注件数" : "総資産";
+      metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
 
-    const denom = (maxS - minS) || 1;
-    const yToPx = v => padT + (1 - (v - minS) / denom) * innerH;
+      const denom = (maxS - minS) || 1;
+      const yToPx = v => padT + (1 - (v - minS) / denom) * innerH;
 
-    const barW = 26;
+      const barW = 26;
 
-    chartMount.innerHTML = `
-        <svg width="${W}" height="${H}">
-        ${series.map((v,i)=>{
+      chartMount.innerHTML = `
+        <svg width="${W}" height="${H}" style="display:block;">
+          ${[minS, midS, maxS].map(v=>{
+            const y = yToPx(v);
+            return `
+              <line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}"
+                    stroke="rgba(0,0,0,.10)" stroke-width="1"></line>
+              <text x="${padL-8}" y="${y+4}" text-anchor="end"
+                    font-size="11" fill="rgba(34,34,34,.55)" font-weight="900">
+                ${labelFor(v, isOrders)}
+              </text>
+            `;
+          }).join("")}
+
+          ${series.map((v,i)=>{
             const x = padL + i*xStep;
             const y = yToPx(v);
-            const h = yToPx(minS) - y;
+            const h = yToPx(minS) - y; /* マイナスも許容（要望どおり） */
             return `<rect x="${x-barW/2}" y="${y}" width="${barW}" height="${h}"
-            rx="8" fill="rgba(225,138,106,.9)"></rect>`;
-        }).join("")}
+                         rx="8" ry="8"
+                         fill="rgba(225,138,106,.9)"
+                         stroke="rgba(0,0,0,.10)" stroke-width="1"></rect>`;
+          }).join("")}
 
-        ${months.map((m,i)=>`
+          ${months.map((m,i)=>`
             <text x="${padL+i*xStep}" y="${H-18}" text-anchor="middle"
-            font-size="12" fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
-        `).join("")}
+                  font-size="12" fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
+          `).join("")}
         </svg>
-    `;
+      `;
 
-    chartScroller.scrollLeft = keepScroll ? prevSL : chartScroller.scrollWidth;
+      chartScroller.scrollLeft = keepScroll ? prevSL : chartScroller.scrollWidth;
     }
 
     chartScroller.addEventListener("scroll", ()=>{
-    if(rafScroll) return;
-    rafScroll = requestAnimationFrame(()=>{
+      if(rafScroll) return;
+      rafScroll = requestAnimationFrame(()=>{
         rafScroll=0;
         renderChart({ keepScroll:true });
-    });
+      });
     });
 
     const cardChart = document.getElementById("card-chart");
     cardChart.addEventListener("click", ()=>{
-    cardChart.classList.add("flip");
-    setTimeout(()=>{
+      cardChart.classList.add("flip");
+      setTimeout(()=>{
         mode = mode==="orders" ? "assets" : "orders";
         renderChart({ keepScroll:true });
-    },260);
-    setTimeout(()=>cardChart.classList.remove("flip"),560);
+      },260);
+      setTimeout(()=>cardChart.classList.remove("flip"),560);
     });
 
+    // 初期表示：最新（月）を右端
     renderChart({ keepScroll:false });
-
 
     /* ===== 2) カレンダー（見た目） ===== */
     const calMonthLabel = document.getElementById("calMonthLabel");
