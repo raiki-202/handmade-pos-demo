@@ -111,6 +111,7 @@ body{
 
 .cardFace{
   grid-area: 1 / 1;
+  backface-constiveness:hidden;
   backface-visibility:hidden;
   -webkit-backface-visibility:hidden;
   background: linear-gradient(180deg,var(--glass-bg),var(--glass-bg2));
@@ -136,10 +137,10 @@ body{
 .badgeBig .v{ font-size:18px; font-weight:900; }
 
 /* ===== chart ===== */
-.chartWrap{ 
-    padding:12px 0;
-    overflow: hidden;
- }
+.chartWrap{
+  padding:12px 0;
+  overflow: hidden;
+}
 .chartFrame{ position:relative; padding:0 12px 10px; }
 
 .yAxisFixed{
@@ -168,6 +169,20 @@ body{
   cursor:pointer;
   user-select:none;
   -webkit-user-select:none;
+}
+
+/* ===== ★ tooltip（追加） ===== */
+.chartTooltip{
+  pointer-events:none;
+}
+.chartTooltip rect{
+  fill: rgba(34,34,34,.92);
+  rx:8;
+}
+.chartTooltip text{
+  fill:#fff;
+  font-size:12px;
+  font-weight:900;
 }
 
 /* ===== calendar ===== */
@@ -221,7 +236,6 @@ body{
   color:#fff;
   background:linear-gradient(180deg,rgba(225,138,106,.95),rgba(208,100,99,.92));
 }
-/* ★ 未定義だった soft を追加 */
 .pill.soft{
   color:rgba(34,34,34,.72);
   background:rgba(255,255,255,.68);
@@ -271,7 +285,6 @@ body{
 .st-doing .dot{ background:var(--ok); }
 .st-wait  .dot{ background:var(--wait); }
 .st-done  .dot{ background:var(--done); }
-/* ★ 未定義だった todo を追加 */
 .st-todo  .dot{ background:var(--todo); }
 
 /* motion軽減 */
@@ -520,16 +533,29 @@ body{
       minS = down5(minS);
       maxS = up5(maxS);
       if(maxS - minS < 20) maxS = minS + 20;
+      if(maxS === minS) maxS = minS + 20;
+      return {minS,maxS}; // ordersは従来通り
     }else{
-      minS = Math.floor(minS/10000)*10000;
-      maxS = Math.ceil(maxS/10000)*10000;
+      // ★ 総資産は「5万刻み」に揃える
+      const base = 50000; // 5万
+      minS = Math.floor(minS/base)*base;
+      maxS = Math.ceil (maxS/base)*base;
+
+      let step = Math.ceil(((maxS - minS) / 4) / base) * base;
+      if(step < base) step = base;
+
+      maxS = minS + step*4;
+
+      return {minS,maxS,step};
     }
-    if(maxS === minS) maxS = minS + (isOrders ? 20 : 10000);
-    return {minS,maxS};
   }
 
-  function makeTicks(minS,maxS,steps=5){
+  function makeTicks(minS,maxS,steps=5, stepOpt=null){
     const arr=[];
+    if(stepOpt){
+      for(let i=0;i<steps;i++) arr.push(minS + stepOpt*i);
+      return arr;
+    }
     const d=(maxS-minS)/(steps-1);
     for(let i=0;i<steps;i++) arr.push(minS + d*i);
     arr[0]=minS; arr[arr.length-1]=maxS;
@@ -554,6 +580,42 @@ body{
     `;
   }
 
+  /* ===== ★ tooltip utils（追加） ===== */
+  function removeTooltip(svg){
+    const old = svg.querySelector(".chartTooltip");
+    if(old) old.remove();
+  }
+
+  function showTooltip(svg, x, y, text){
+    removeTooltip(svg);
+
+    const ns = "http://www.w3.org/2000/svg";
+    const g = document.createElementNS(ns, "g");
+    g.setAttribute("class","chartTooltip");
+
+    const t = document.createElementNS(ns, "text");
+    t.textContent = text;
+    t.setAttribute("x", x);
+    t.setAttribute("y", y - 14);
+    t.setAttribute("text-anchor","middle");
+
+    // 一旦入れて bbox 測る
+    g.appendChild(t);
+    svg.appendChild(g);
+
+    const bbox = t.getBBox();
+    const padX = 10;
+    const padY = 6;
+
+    const r = document.createElementNS(ns, "rect");
+    r.setAttribute("x", bbox.x - padX);
+    r.setAttribute("y", bbox.y - padY);
+    r.setAttribute("width", bbox.width + padX*2);
+    r.setAttribute("height", bbox.height + padY*2);
+
+    g.insertBefore(r, t);
+  }
+
   /* ===== 描画（面ごと） ===== */
   function renderChartInto(elems, mode, {keepScroll=true} = {}){
     const isOrders = (mode === "orders");
@@ -570,8 +632,9 @@ body{
     const prevSL = elems.scroller.scrollLeft;
 
     const [i0,i1] = getVisibleRange(elems.scroller, {padL:42, xStep, N});
-    const {minS,maxS} = computeScale(series,i0,i1,isOrders);
-    const ticks = makeTicks(minS,maxS,5);
+    const scale = computeScale(series,i0,i1,isOrders);
+    const ticks = makeTicks(scale.minS, scale.maxS, 5, scale.step || null);
+    const {minS,maxS} = scale;
 
     const latest=series[N-1];
     elems.title.textContent       = isOrders ? "受注件数の推移" : "総資産の推移";
@@ -599,10 +662,20 @@ body{
         <path d="${path}" fill="none" stroke="rgba(225,138,106,.95)"
               stroke-width="3" stroke-linecap="round"/>
 
-        ${pts.map(p=>`
-          <circle cx="${p.x}" cy="${p.y}" r="5"
-            fill="rgba(255,255,255,.95)" stroke="rgba(34,34,34,.28)" stroke-width="2"/>
-        `).join("")}
+        ${pts.map((p,i)=>{
+          const val = series[i];
+          const label = isOrders ? `${val}件` : formatJPY(val);
+          return `
+            <circle cx="${p.x}" cy="${p.y}" r="6"
+              fill="rgba(255,255,255,.95)"
+              stroke="rgba(34,34,34,.28)"
+              stroke-width="2"
+              data-x="${p.x}"
+              data-y="${p.y}"
+              data-label="${label}"
+              class="chartPoint"/>
+          `;
+        }).join("")}
 
         ${months.map((m,i)=>`
           <text x="${42+i*xStep}" y="${H-18}" text-anchor="middle"
@@ -610,6 +683,21 @@ body{
         `).join("")}
       </svg>
     `;
+
+    // ★ 点タップでtooltip（追加）
+    const svg = elems.chartMount.querySelector("svg");
+    svg.addEventListener("click", (e)=>{
+      const target = e.target;
+
+      if(target.classList && target.classList.contains("chartPoint")){
+        const x = Number(target.dataset.x);
+        const y = Number(target.dataset.y);
+        const label = target.dataset.label;
+        showTooltip(svg, x, y, label);
+      }else{
+        removeTooltip(svg);
+      }
+    });
 
     elems.scroller.scrollLeft = keepScroll ? prevSL : elems.scroller.scrollWidth;
   }
@@ -642,7 +730,7 @@ body{
   renderChartInto(A, "orders", {keepScroll:false});
   renderChartInto(B, "assets", {keepScroll:false});
 
-  /* ===== flip（カード全体クリックでもOKだが、誤作動しないよう上で止めてる） ===== */
+  /* ===== flip ===== */
   function flip(){
     isFlipped = !isFlipped;
     cardChart.classList.toggle("is-flipped", isFlipped);
