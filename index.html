@@ -98,6 +98,7 @@ body{
    “非3D” flip（Safariでもスクロール壊れない）
    ＋モザイク演出
 ===================================================== */
+.hint{ display:none; }
 .cardFlip{ position:relative; cursor:pointer; }
 .cardFlipInner{
   position:relative;
@@ -118,30 +119,36 @@ body{
 .cardFlip.is-flipped .cardFace.front{ opacity:0; pointer-events:none; }
 .cardFlip.is-flipped .cardFace.back { opacity:1; pointer-events:auto; }
 
-/* モザイクっぽい“特別画面”演出（ノイズ＋格子＋ブラー） */
+/* ===== 上品な切替演出：薄いベール＋ぼかし＋ディゾルブ ===== */
+.cardFace{
+  transition: opacity .75s ease; /* ★ゆっくり上品 */
+}
+
 .cardFace::after{
   content:"";
   position:absolute;
-  inset:0;
+  inset:-20%;
   pointer-events:none;
   opacity:0;
-  mix-blend-mode:multiply;
   background:
-    radial-gradient(1200px 600px at 20% 20%, rgba(225,138,106,.22), transparent 60%),
-    radial-gradient(1000px 520px at 85% 10%, rgba(208,100,99,.18), transparent 58%),
-    repeating-linear-gradient(90deg, rgba(0,0,0,.065) 0 1px, transparent 1px 10px),
-    repeating-linear-gradient(0deg,  rgba(0,0,0,.055) 0 1px, transparent 1px 10px);
-  filter: blur(0px);
-  transition: opacity .60s ease, filter .60s ease;
+    radial-gradient(800px 520px at 18% 20%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(900px 560px at 85% 10%, rgba(225,138,106,.20), transparent 62%),
+    radial-gradient(900px 640px at 80% 90%, rgba(208,100,99,.14), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+  filter: blur(10px);
+  transform: translateY(-6px);
+  transition: opacity .75s ease, transform .75s ease, filter .75s ease;
 }
 
-/* 切替中だけ出す */
+/* 切替中だけ：軽く霞ませて“ベールがかかる” */
 .cardFlip.is-animating .cardFace{
-  filter: blur(4px) saturate(1.08) contrast(1.02);
+  filter: blur(2.2px) saturate(1.03);
 }
+
 .cardFlip.is-animating .cardFace::after{
   opacity:1;
-  filter: blur(1.6px);
+  transform: translateY(0);
+  filter: blur(14px);
 }
 
 /* ===== card head ===== */
