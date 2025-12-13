@@ -516,23 +516,33 @@ body{
   const flipHintA = document.getElementById("flipHintA");
   const flipHintB = document.getElementById("flipHintB");
 
+  // 「タップで〜切り替え」文言は消す（余白ごと消したいなら .hint をCSSでdisplay:none でもOK）
+  if(flipHintA) flipHintA.style.display = "none";
+  if(flipHintB) flipHintB.style.display = "none";
+
   const A = {
     mount: document.getElementById("chartMountA"),
     yAxis: document.getElementById("yAxisFixedA"),
     scroller: document.getElementById("chartScrollerA"),
     metricValue: document.getElementById("metricValueA"),
-    _pts:[]
+    _pts:[],
+    // スケールアニメ用
+    scale: null,        // {minS,maxS,step,ticks,isOrders}
+    anim: null          // {from,to,start,dur,raf}
   };
   const B = {
     mount: document.getElementById("chartMountB"),
     yAxis: document.getElementById("yAxisFixedB"),
     scroller: document.getElementById("chartScrollerB"),
     metricValue: document.getElementById("metricValueB"),
-    _pts:[]
+    _pts:[],
+    scale: null,
+    anim: null
   };
 
   let isFlipped = false;
 
+  /* ===== 表示範囲 ===== */
   function getVisibleRange(scroller, {padL,xStep,N}){
     const sl = scroller.scrollLeft;
     const vw = scroller.clientWidth;
@@ -541,6 +551,7 @@ body{
     return [clamp(s,0,N-1), clamp(e,0,N-1)];
   }
 
+  /* ===== スケール計算 ===== */
   function computeScale(series,i0,i1,isOrders){
     const slice = series.slice(i0,i1+1);
     let minV = Math.min(...slice);
@@ -557,9 +568,9 @@ body{
       maxS = up5(maxS);
       if(maxS - minS < 20) maxS = minS + 20;
       if(maxS === minS) maxS = minS + 20;
-      return {minS,maxS};
+      return {minS,maxS,step:null};
     }else{
-      const base = 50000;
+      const base = 50000; // 5万刻み
       minS = Math.floor(minS/base)*base;
       maxS = Math.ceil (maxS/base)*base;
 
@@ -571,14 +582,15 @@ body{
     }
   }
 
-  function makeTicks(minS,maxS,steps=5, stepOpt=null){
+  function makeTicksFromScale(scale){
+    const {minS,maxS,step} = scale;
     const arr=[];
-    if(stepOpt){
-      for(let i=0;i<steps;i++) arr.push(minS + stepOpt*i);
+    if(step){
+      for(let i=0;i<5;i++) arr.push(minS + step*i);
       return arr;
     }
-    const d=(maxS-minS)/(steps-1);
-    for(let i=0;i<steps;i++) arr.push(minS + d*i);
+    const d=(maxS-minS)/4;
+    for(let i=0;i<5;i++) arr.push(minS + d*i);
     arr[0]=minS; arr[arr.length-1]=maxS;
     return arr;
   }
@@ -606,7 +618,6 @@ body{
     const old = svg.querySelector(".chartTooltip");
     if(old) old.remove();
   }
-
   function showTooltip(svg, x, y, text){
     removeTooltip(svg);
 
@@ -635,7 +646,8 @@ body{
     g.insertBefore(r, t);
   }
 
-  function renderChartInto(elems, mode, {keepScroll=true} = {}){
+  /* ===== 描画：scale指定で描く（※ここが“ぬるぬる”の肝） ===== */
+  function renderWithScale(elems, mode, scale){
     const isOrders = (mode === "orders");
     const series = isOrders ? orders : assets;
 
@@ -648,11 +660,7 @@ body{
 
     elems.mount.style.width = `${42 + W}px`;
 
-    const prevSL = elems.scroller.scrollLeft;
-
-    const [i0,i1] = getVisibleRange(elems.scroller, {padL:42, xStep, N});
-    const scale = computeScale(series,i0,i1,isOrders);
-    const ticks = makeTicks(scale.minS, scale.maxS, 5, scale.step || null);
+    const ticks = scale.ticks;
     const {minS,maxS} = scale;
 
     const latest=series[N-1];
@@ -695,14 +703,108 @@ body{
       x:p.x, y:p.y,
       label: isOrders ? `${p.v}件` : formatJPY(p.v)
     }));
-
-    if(!keepScroll){
-      elems.scroller.scrollLeft = elems.scroller.scrollWidth - elems.scroller.clientWidth;
-    }else{
-      elems.scroller.scrollLeft = prevSL;
-    }
   }
 
+  /* ===== 現在のスクロール位置から “目標スケール” を作る ===== */
+  function calcTargetScale(elems, mode){
+    const isOrders = (mode === "orders");
+    const series = isOrders ? orders : assets;
+    const N = series.length;
+    const xStep = 96;
+
+    const [i0,i1] = getVisibleRange(elems.scroller, {padL:42, xStep, N});
+    const s = computeScale(series, i0, i1, isOrders);
+    const ticks = makeTicksFromScale(s);
+
+    return { ...s, ticks, isOrders };
+  }
+
+  /* ===== スケールを“ぬるぬる”で寄せる ===== */
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
+
+  function animateScale(elems, mode, toScale){
+    const fromScale = elems.scale || toScale;
+
+    // 同値ならアニメ不要
+    const same = (Math.abs(fromScale.minS - toScale.minS) < 1e-6) && (Math.abs(fromScale.maxS - toScale.maxS) < 1e-6);
+    if(same){
+      elems.scale = toScale;
+      renderWithScale(elems, mode, toScale);
+      return;
+    }
+
+    // 既存アニメ停止
+    if(elems.anim && elems.anim.raf) cancelAnimationFrame(elems.anim.raf);
+
+    const anim = {
+      from: fromScale,
+      to: toScale,
+      start: performance.now(),
+      dur: 260, // ★ここが“ぬるぬる具合”（大きいほどゆっくり）
+      raf: 0
+    };
+    elems.anim = anim;
+
+    const step = (now)=>{
+      const t = clamp((now - anim.start) / anim.dur, 0, 1);
+      const k = easeOutCubic(t);
+
+      // min/max と ticks を補間（ticksも補間するから“カクッ”が消える）
+      const cur = {
+        minS: lerp(anim.from.minS, anim.to.minS, k),
+        maxS: lerp(anim.from.maxS, anim.to.maxS, k),
+        step: anim.to.step,
+        isOrders: anim.to.isOrders,
+        ticks: anim.to.ticks.map((tv, i)=>{
+          const fv = anim.from.ticks[i] ?? anim.from.ticks.at(-1);
+          return lerp(fv, tv, k);
+        })
+      };
+
+      elems.scale = cur;
+      renderWithScale(elems, mode, cur);
+
+      if(t < 1){
+        anim.raf = requestAnimationFrame(step);
+      }else{
+        elems.scale = anim.to;
+        renderWithScale(elems, mode, anim.to);
+      }
+    };
+
+    anim.raf = requestAnimationFrame(step);
+  }
+
+  /* ===== 初期描画（右端＝最新） ===== */
+  function initChart(elems, mode){
+    const target = calcTargetScale(elems, mode);
+    elems.scale = target;
+    renderWithScale(elems, mode, target);
+
+    // 初回だけ右端へ
+    elems.scroller.scrollLeft = elems.scroller.scrollWidth - elems.scroller.clientWidth;
+
+    // 右端へ寄せた後に、もう一回 target を取り直して描画（表示範囲が変わるので）
+    const target2 = calcTargetScale(elems, mode);
+    elems.scale = target2;
+    renderWithScale(elems, mode, target2);
+  }
+
+  /* ===== スクロール中：リアルタイムに目標へ寄せる ===== */
+  function attachSmoothScaleOnScroll(elems, mode){
+    let raf = 0;
+    elems.scroller.addEventListener("scroll", ()=>{
+      if(raf) return;
+      raf = requestAnimationFrame(()=>{
+        raf = 0;
+        const target = calcTargetScale(elems, mode);
+        animateScale(elems, mode, target);
+      });
+    }, {passive:true});
+  }
+
+  /* ===== タップで近い点→tooltip（スクロール邪魔しない） ===== */
   function attachTapToShowTooltip(elems){
     let downX=0, downY=0, moved=false;
 
@@ -762,28 +864,18 @@ body{
     elems.scroller.addEventListener("touchend",   onUp,   {passive:true});
   }
 
-  function attachEndRedraw(elems, mode){
-    let timer = 0;
-    const fire = ()=>{
-      clearTimeout(timer);
-      timer = setTimeout(()=>{
-        renderChartInto(elems, mode, {keepScroll:true});
-      }, 140);
-    };
-    elems.scroller.addEventListener("scroll", fire, {passive:true});
-  }
+  /* ===== 起動 ===== */
+  initChart(A, "orders");
+  initChart(B, "assets");
 
-  attachEndRedraw(A, "orders");
-  attachEndRedraw(B, "assets");
+  attachSmoothScaleOnScroll(A, "orders");
+  attachSmoothScaleOnScroll(B, "assets");
 
-  renderChartInto(A, "orders", {keepScroll:false});
-  renderChartInto(B, "assets", {keepScroll:false});
   attachTapToShowTooltip(A);
   attachTapToShowTooltip(B);
 
-  /* ===== 切替（ゆっくり＋モザイク） ===== */
-  const ANIM_MS = 650; // ★ゆっくり
-
+  /* ===== flip（グラフ操作領域以外＝どこでも切替） ===== */
+  const ANIM_MS = 650; // 切替の“ゆっくり”
   function flip(){
     isFlipped = !isFlipped;
     cardChart.classList.add("is-animating");
@@ -791,18 +883,17 @@ body{
     setTimeout(()=> cardChart.classList.remove("is-animating"), ANIM_MS);
   }
 
-  // ★「グラフ操作領域（chartScroller）だけ」は flip させない
-  // ＝カード内の “グラフ以外” は全部タップで切替
   cardChart.addEventListener("click", (e)=>{
+    // ★chartScroller 触ってる時は切替しない（スクロール最優先）
     if(e.target.closest(".chartScroller")) return;
     flip();
   });
 
-  // ヒントクリックでも切替（保険）
-  flipHintA.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
-  flipHintB.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
+  // （残しておく：万一 span が残ってたら）
+  if(flipHintA) flipHintA.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
+  if(flipHintB) flipHintB.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
 
-  /* ===== 以下：カレンダー＆テーブル（そのまま） ===== */
+  /* ===== 以下：カレンダー＆テーブル（元のまま） ===== */
   const calMonthLabel = document.getElementById("calMonthLabel");
   const calTitle = document.getElementById("calTitle");
   const calGrid = document.getElementById("calGrid");
