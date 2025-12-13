@@ -95,30 +95,38 @@ body{
 }
 
 /* =====================================================
-   flip card（高さ確保＋チラ見え防止＋Safari安定）
+   “非3D” flip（Safariでもスクロール壊れない）
 ===================================================== */
-.cardFlip{ perspective:1200px; }
+.cardFlip{ position:relative; }
 .cardFlipInner{
-  display:grid;
-  transform-style:preserve-3d;
-  transition:transform .55s cubic-bezier(.22,.9,.22,1);
-  will-change:transform;
-  transform: translateZ(0);
-  min-height: 360px;
+  position:relative;
+  min-height:360px;
 }
-.cardFlip.is-flipped .cardFlipInner{ transform:rotateY(180deg) translateZ(0); }
 
+/* 2面を重ねてフェード切替（transform無し） */
 .cardFace{
-  grid-area: 1 / 1;
-  backface-visibility:hidden;
-  -webkit-backface-visibility:hidden;
+  position:absolute;
+  inset:0;
   background: linear-gradient(180deg,var(--glass-bg),var(--glass-bg2));
-  transform: translateZ(0);
-  height: 100%;
-  overflow: hidden;
+  opacity:0;
+  pointer-events:none;
+  transition: opacity .28s ease;
 }
-.cardFace.front{ transform:rotateY(0deg) translateZ(0); }
-.cardFace.back { transform:rotateY(180deg) translateZ(0); }
+.cardFace.front{ opacity:1; pointer-events:auto; }
+.cardFlip.is-flipped .cardFace.front{ opacity:0; pointer-events:none; }
+.cardFlip.is-flipped .cardFace.back { opacity:1; pointer-events:auto; }
+
+/* 切替時の“ぬるっと感” */
+.cardFace .chartInnerSwitch{
+  transform-origin:50% 50%;
+}
+.cardFlip.is-animating .cardFace{
+  filter: blur(.6px);
+}
+@media (prefers-reduced-motion: reduce){
+  .cardFace{ transition:none; }
+  .cardFlip.is-animating .cardFace{ filter:none; }
+}
 
 /* ===== card head ===== */
 .cardHead{
@@ -147,7 +155,7 @@ body{
   z-index:2;
 }
 
-/* スクロール領域 */
+/* スクロール領域（これが本体） */
 .chartScroller{
   overflow-x:auto;
   overflow-y:hidden;
@@ -158,16 +166,14 @@ body{
 /* 左余白（Y軸固定分） */
 .chartInner{
   padding-left:42px;
-  display:inline-block;     /* ★ これ追加：中身の幅で伸びる */
+  display:inline-block;          /* ★中身の幅で伸びる */
 }
-/* mountも幅で伸びるように */
 .chartMount{
-  display:inline-block;     /* ★ これ追加 */
+  display:inline-block;          /* ★中身の幅で伸びる */
 }
-
-/* svgはブロック化（幅計算が安定） */
+/* SVGはブロック化（幅計算が安定） */
 .chartMount svg{
-  display:block;            /* ★ これ追加 */
+  display:block;
   pointer-events:none;
   user-select:none;
   -webkit-user-select:none;
@@ -278,10 +284,6 @@ body{
 .st-wait  .dot{ background:var(--wait); }
 .st-done  .dot{ background:var(--done); }
 .st-todo  .dot{ background:var(--todo); }
-
-@media (prefers-reduced-motion: reduce){
-  .cardFlipInner{ transition:none; }
-}
 </style>
 </head>
 
@@ -298,11 +300,11 @@ body{
     <!-- HOME -->
     <main id="view-home" class="grid">
 
-      <!-- 1) グラフ（flip） -->
-      <section class="card cardFlip" id="card-chart" title="タップで切替">
+      <!-- 1) グラフ（切替） -->
+      <section class="card cardFlip" id="card-chart">
         <div class="cardFlipInner">
 
-          <!-- FRONT -->
+          <!-- FRONT：受注件数 -->
           <div class="cardFace front">
             <div class="cardHead">
               <div class="title">
@@ -319,18 +321,18 @@ body{
               <div class="chartFrame">
                 <div class="yAxisFixed" id="yAxisFixedA"></div>
                 <div class="chartScroller" id="chartScrollerA">
-                  <div class="chartInner">
+                  <div class="chartInner chartInnerSwitch">
                     <div class="chartMount" id="chartMountA"></div>
                   </div>
                 </div>
               </div>
               <div class="hint">
-                <span class="tapHint" id="flipHintA">👆 タップで「総資産の推移」に切替（回転）</span>
+                <span class="tapHint" id="flipHintA">👆 タップで「総資産の推移」に切替</span>
               </div>
             </div>
           </div>
 
-          <!-- BACK -->
+          <!-- BACK：総資産 -->
           <div class="cardFace back">
             <div class="cardHead">
               <div class="title">
@@ -347,13 +349,13 @@ body{
               <div class="chartFrame">
                 <div class="yAxisFixed" id="yAxisFixedB"></div>
                 <div class="chartScroller" id="chartScrollerB">
-                  <div class="chartInner">
+                  <div class="chartInner chartInnerSwitch">
                     <div class="chartMount" id="chartMountB"></div>
                   </div>
                 </div>
               </div>
               <div class="hint">
-                <span class="tapHint" id="flipHintB">👆 タップで「受注件数の推移」に切替（回転）</span>
+                <span class="tapHint" id="flipHintB">👆 タップで「受注件数の推移」に切替</span>
               </div>
             </div>
           </div>
@@ -499,7 +501,6 @@ body{
   };
 
   let isFlipped = false;
-  let rafA = 0, rafB = 0;
 
   function getVisibleRange(scroller, {padL,xStep,N}){
     const sl = scroller.scrollLeft;
@@ -527,7 +528,7 @@ body{
       if(maxS === minS) maxS = minS + 20;
       return {minS,maxS};
     }else{
-      const base = 50000; // 5万刻み
+      const base = 50000;
       minS = Math.floor(minS/base)*base;
       maxS = Math.ceil (maxS/base)*base;
 
@@ -615,7 +616,9 @@ body{
     const innerH=H-padT-padB;
     const W=16 + xStep*(N-1) + padR;
 
-    // ★ keepScroll=true の時は scrollLeft を触らない（ここが肝）
+    // ★ここが超重要：スクロール幅を “確実に” 作る
+    elems.mount.style.width = `${42 + W}px`;
+
     const prevSL = elems.scroller.scrollLeft;
 
     const [i0,i1] = getVisibleRange(elems.scroller, {padL:42, xStep, N});
@@ -632,7 +635,6 @@ body{
     renderYAxis(elems, {ticks,yToPx,H,isOrders});
 
     const pts = series.map((v,i)=>({x:42+i*xStep, y:yToPx(v), v}));
-
     const path = pts.map((p,i)=> i ? `L ${p.x},${p.y}` : `M ${p.x},${p.y}`).join(" ");
 
     elems.mount.innerHTML = `
@@ -665,16 +667,15 @@ body{
       label: isOrders ? `${p.v}件` : formatJPY(p.v)
     }));
 
-    // ★ 初回だけ右端に寄せる（以後は触らない）
+    // ★初回だけ右端（最新月）へ
     if(!keepScroll){
-     elems.scroller.scrollLeft = elems.scroller.scrollWidth - elems.scroller.clientWidth;
+      elems.scroller.scrollLeft = elems.scroller.scrollWidth - elems.scroller.clientWidth;
     }else{
-      // 触らない（prevSLも戻さない）
-      // elems.scroller.scrollLeft = prevSL; ←これがスクロール殺してた
+      elems.scroller.scrollLeft = prevSL;
     }
   }
 
-  /* ===== タップで近い点→tooltip ===== */
+  /* ===== タップで近い点→tooltip（スクロール阻害しない） ===== */
   function attachTapToShowTooltip(elems){
     let downX=0, downY=0, moved=false;
 
@@ -731,26 +732,25 @@ body{
     elems.scroller.addEventListener("pointermove", onMove, {passive:true});
     elems.scroller.addEventListener("pointerup",   onUp,   {passive:true});
 
-    // iPhone保険
     elems.scroller.addEventListener("touchstart", onDown, {passive:true});
     elems.scroller.addEventListener("touchmove",  onMove, {passive:true});
     elems.scroller.addEventListener("touchend",   onUp,   {passive:true});
   }
-/* ===== スクロール中は再描画しない（離した後に1回だけ） ===== */
-function attachEndRedraw(elems, mode){
-  let timer = 0;
-  const fire = ()=>{
-    clearTimeout(timer);
-    timer = setTimeout(()=>{
-      renderChartInto(elems, mode, {keepScroll:true});
-    }, 120);
-  };
-  elems.scroller.addEventListener("pointerup", fire, {passive:true});
-  elems.scroller.addEventListener("touchend",  fire, {passive:true});
-}
 
-attachEndRedraw(A, "orders");
-attachEndRedraw(B, "assets");
+  /* ===== スクロール終了後に縦軸を更新（スクロール中は邪魔しない） ===== */
+  function attachEndRedraw(elems, mode){
+    let timer = 0;
+    const fire = ()=>{
+      clearTimeout(timer);
+      timer = setTimeout(()=>{
+        renderChartInto(elems, mode, {keepScroll:true});
+      }, 120);
+    };
+    elems.scroller.addEventListener("scroll", fire, {passive:true});
+  }
+
+  attachEndRedraw(A, "orders");
+  attachEndRedraw(B, "assets");
 
   /* ===== 初期描画 ===== */
   renderChartInto(A, "orders", {keepScroll:false});
@@ -758,15 +758,17 @@ attachEndRedraw(B, "assets");
   attachTapToShowTooltip(A);
   attachTapToShowTooltip(B);
 
-  /* ===== flip ===== */
+  /* ===== 切替（チャート部分を触っても切替しない） ===== */
   function flip(){
     isFlipped = !isFlipped;
+    cardChart.classList.add("is-animating");
     cardChart.classList.toggle("is-flipped", isFlipped);
+    setTimeout(()=> cardChart.classList.remove("is-animating"), 280);
   }
 
-  // スクロール領域内クリックはflipしない
+  // 「グラフ領域」は flip させない（スクロール最優先）
   cardChart.addEventListener("click", (e)=>{
-    if(e.target.closest(".chartScroller")) return;
+    if(e.target.closest(".chartWrap")) return;
     flip();
   });
   flipHintA.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
