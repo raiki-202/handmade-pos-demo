@@ -137,6 +137,15 @@ body{
 .badgeBig .v{ font-size:18px; font-weight:900; }
 
 /* ===== chart ===== */
+/* ===== SVG上でも横スクロール優先（iOS対策） ===== */
+.chartScroller svg{
+  touch-action: pan-x;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 点はタップ対象って分かるように（PC） */
+.chartPoint{ cursor: pointer; }
 .chartWrap{
   padding:12px 0;
   overflow: hidden;
@@ -684,20 +693,37 @@ body{
       </svg>
     `;
 
-    // ★ 点タップでtooltip（追加）
-    const svg = elems.chartMount.querySelector("svg");
-    svg.addEventListener("click", (e)=>{
-      const target = e.target;
+    // ★ 点タップでtooltip（iPhone対応：pointerup/touchend）
+const svg = elems.chartMount.querySelector("svg");
 
-      if(target.classList && target.classList.contains("chartPoint")){
-        const x = Number(target.dataset.x);
-        const y = Number(target.dataset.y);
-        const label = target.dataset.label;
-        showTooltip(svg, x, y, label);
-      }else{
-        removeTooltip(svg);
-      }
-    });
+// iOSで横スクロールを邪魔しない宣言（保険）
+svg.style.touchAction = "pan-x";
+
+const handleTip = (e)=>{
+  const target = e.target;
+
+  if(target?.classList?.contains("chartPoint")){
+    // 点タップ時だけ “タップとして確定”
+    // （スクロール中は通常 target が点になりにくい）
+    if(e.type === "touchend") e.preventDefault();
+
+    const x = Number(target.dataset.x);
+    const y = Number(target.dataset.y);
+    const label = target.dataset.label;
+    showTooltip(svg, x, y, label);
+  }else{
+    removeTooltip(svg);
+  }
+};
+
+// PC / Android / iOS（新しめ）
+svg.addEventListener("pointerup", handleTip);
+
+// iPhone Safari（保険）
+svg.addEventListener("touchend", handleTip, {passive:false});
+
+// PC（既存互換）
+svg.addEventListener("click", handleTip);
 
     elems.scroller.scrollLeft = keepScroll ? prevSL : elems.scroller.scrollWidth;
   }
