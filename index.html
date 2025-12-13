@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>e.nue Dashboard</title>
+  <style>
+    :root{
+      /* ===== photo palette (light glass) ===== */
+      --bg1:#e3ddd4;
+      --bg2:#d4ccc1;
+
+      --glass-bg: rgba(255,255,255,.86);
+      --glass-bg2: rgba(255,255,255,.78);
+      --glass-border: rgba(0,0,0,.06);
+      --line-soft: rgba(0,0,0,.10);
+      --shadow: 0 18px 45px rgba(0,0,0,.14);
+
+      --text-main:#222222;
+      --text-sub:#555555;
+      --muted: rgba(34,34,34,.55);
+
+      --accent:#e18a6a;
+      --accent2:#d06463;
+
+      --ok:#2fbf7a;
+      --wait:#f0a33a;
+      --done:#6d78d8;
+
+      --r: 18px;
+      --maxw: 980px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+      color: var(--text-main);
+      background:
+        radial-gradient(1200px 800px at 18% 8%, rgba(225,138,106,.18), transparent 55%),
+        radial-gradient(1200px 800px at 88% 0%, rgba(208,100,99,.14), transparent 52%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+    }
+
+    .safe{
+      padding: max(14px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+      max-width: var(--maxw);
+      margin: 0 auto;
+    }
+
+    /* top switch */
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px;
+      margin: 6px 0 14px;
+    }
+    .brand{
+      font-weight: 900;
+      letter-spacing: .02em;
+      color: var(--text-main);
+      opacity: .92;
+    }
+    .tabs{
+      display:flex;
+      background: rgba(255,255,255,.55);
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .tab{
+      border:0;
+      background: transparent;
+      color: rgba(34,34,34,.65);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+    .tab.active{
+      background: rgba(255,255,255,.80);
+      color: var(--text-main);
+      box-shadow: 0 8px 18px rgba(0,0,0,.08);
+    }
+
+    /* layout */
+    .grid{
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+    @media (min-width: 768px){
+      .grid{ gap: 16px; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, var(--glass-bg), var(--glass-bg2));
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .cardHead{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:10px;
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(0,0,0,.06);
+    }
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .title .h{
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: rgba(34,34,34,.85);
+    }
+    .title .s{
+      font-size: 12px;
+      color: rgba(34,34,34,.60);
+    }
+    .badgeBig{
+      text-align:right;
+      line-height:1.05;
+      padding-top: 2px;
+    }
+    .badgeBig .k{
+      font-size: 11px;
+      color: rgba(34,34,34,.55);
+      letter-spacing:.04em;
+      font-weight:800;
+    }
+    .badgeBig .v{
+      margin-top: 2px;
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--text-main);
+    }
+
+    /* chart */
+    .chartWrap{ padding: 12px 0 12px; }
+    .chartScroller{
+      overflow-x:auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 0 12px 10px;
+    }
+    .chartInner{
+      width: 640px;
+      min-width: 640px;
+    }
+    .hint{
+      padding: 0 14px 14px;
+      color: rgba(34,34,34,.55);
+      font-size: 12px;
+    }
+    .tapHint{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 8px 10px;
+      background: rgba(255,255,255,.62);
+      border:1px solid rgba(0,0,0,.06);
+      border-radius: 999px;
+    }
+
+    /* calendar */
+    .calendar{ padding: 12px; }
+    .calBox{
+      position:relative;
+      border-radius: 14px;
+      overflow:hidden;
+      border: 1px solid rgba(0,0,0,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.70), rgba(255,255,255,.52));
+    }
+    .calBg{
+      position:absolute; inset:0;
+      background:
+        radial-gradient(600px 360px at 20% 20%, rgba(255,255,255,.55), transparent 60%),
+        radial-gradient(600px 420px at 80% 30%, rgba(225,138,106,.22), transparent 60%),
+        radial-gradient(600px 420px at 60% 90%, rgba(208,100,99,.16), transparent 60%);
+      opacity:.9;
+    }
+    .calGlass{
+      position:relative;
+      padding: 10px 10px 12px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .calTop{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding: 6px 4px 10px;
+      color: rgba(34,34,34,.85);
+      font-weight: 900;
+    }
+    .calTop .month{
+      font-size: 14px;
+      letter-spacing:.04em;
+    }
+    .calGrid{
+      display:grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0;
+      border-top: 1px solid rgba(0,0,0,.08);
+      border-left: 1px solid rgba(0,0,0,.08);
+      border-radius: 12px;
+      overflow:hidden;
+      background: rgba(255,255,255,.35);
+    }
+    .dow, .day{
+      border-right: 1px solid rgba(0,0,0,.08);
+      border-bottom: 1px solid rgba(0,0,0,.08);
+      min-height: 46px;
+      padding: 6px 6px;
+      font-size: 12px;
+      color: rgba(34,34,34,.70);
+      background: rgba(255,255,255,.45);
+    }
+    .dow{
+      min-height:auto;
+      text-align:center;
+      font-weight: 900;
+      letter-spacing:.04em;
+      background: rgba(255,255,255,.65);
+    }
+    .day{ position:relative; background: rgba(255,255,255,.40); }
+    .num{
+      position:absolute;
+      top:6px; left:6px;
+      font-size: 12px;
+      color: rgba(34,34,34,.78);
+      font-weight: 900;
+    }
+
+    /* event pill */
+    .pill{
+      margin-top: 18px;
+      display:inline-block;
+      max-width: 100%;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 900;
+      color: rgba(34,34,34,.85);
+      background: rgba(255,255,255,.75);
+      border: 1px solid rgba(0,0,0,.06);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .pill.accent{
+      color: #ffffff;
+      background: linear-gradient(180deg, rgba(225,138,106,.95), rgba(208,100,99,.92));
+      border: 1px solid rgba(0,0,0,.06);
+    }
+    .pill.soft{
+      color: rgba(34,34,34,.82);
+      background: rgba(225,138,106,.18);
+      border: 1px solid rgba(225,138,106,.25);
+    }
+
+    /* lists */
+    .list{ padding: 10px 12px 12px; }
+    .listTitle{
+      padding: 12px 14px 6px;
+      font-weight: 900;
+      letter-spacing:.03em;
+      color: rgba(34,34,34,.88);
+    }
+    .table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow:hidden;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: rgba(255,255,255,.55);
+    }
+    .thead th{
+      font-size: 12px;
+      color: rgba(34,34,34,.65);
+      text-align:left;
+      font-weight: 900;
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(0,0,0,.08);
+      background: rgba(255,255,255,.70);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .row td{
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(0,0,0,.06);
+      vertical-align: middle;
+      font-size: 13px;
+      color: rgba(34,34,34,.90);
+      background: rgba(255,255,255,.50);
+    }
+    .row:last-child td{ border-bottom:0; }
+
+    .nameCell{
+      display:flex; align-items:center; gap:10px;
+      min-width: 160px;
+    }
+    .doc{
+      width: 18px; height:18px;
+      border-radius: 5px;
+      background: rgba(225,138,106,.22);
+      border: 1px solid rgba(225,138,106,.25);
+      flex: 0 0 auto;
+      box-shadow: 0 10px 18px rgba(0,0,0,.08);
+    }
+    .subCell{
+      font-size: 12px;
+      color: rgba(34,34,34,.60);
+      margin-top: 2px;
+    }
+
+    .status{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 12px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: rgba(255,255,255,.68);
+      white-space:nowrap;
+      color: rgba(34,34,34,.82);
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: rgba(0,0,0,.18);
+    }
+    .st-todo .dot{ background: rgba(0,0,0,.28); }
+    .st-doing .dot{ background: var(--ok); }
+    .st-wait .dot{ background: var(--wait); }
+    .st-done .dot{ background: var(--done); }
+
+    .assignees{
+      display:flex; gap:6px; flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .chip{
+      padding: 6px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      background: rgba(255,255,255,.70);
+      border: 1px solid rgba(0,0,0,.08);
+      color: rgba(34,34,34,.78);
+      white-space:nowrap;
+    }
+
+    /* iPhone縦の見やすさ優先：表は横スクロールOKに */
+    .tableWrap{
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 14px;
+    }
+    .table{ min-width: 520px; }
+  </style>
+</head>
+
+<body>
+  <div class="safe">
+    <div class="topbar">
+      <div class="brand">e.nue</div>
+      <div class="tabs" role="tablist" aria-label="page switch">
+        <button class="tab active" data-view="home">HOME</button>
+        <button class="tab" data-view="other">OTHER</button>
+      </div>
+    </div>
+
+    <!-- HOME -->
+    <main id="view-home" class="grid">
+
+      <!-- 1) 折れ線グラフ枠 -->
+      <section class="card" id="card-chart">
+        <div class="cardHead">
+          <div class="title">
+            <div class="h" id="chartTitle">受注件数の推移</div>
+            <div class="s">横スクロール：過去1年分（後で12Mに拡張）</div>
+          </div>
+          <div class="badgeBig">
+            <div class="k" id="metricLabel">受注件数</div>
+            <div class="v" id="metricValue">—</div>
+          </div>
+        </div>
+
+        <div class="chartWrap" title="タップで切替">
+          <div class="chartScroller">
+            <div class="chartInner" id="chartMount"></div>
+          </div>
+          <div class="hint">
+            <span class="tapHint">👆 グラフをタップで「総資産の推移」に切替</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2) カレンダー枠 -->
+      <section class="card">
+        <div class="cardHead">
+          <div class="title">
+            <div class="h">カレンダー</div>
+            <div class="s">見た目のみ（入れ方は指示待ち）</div>
+          </div>
+          <div class="badgeBig">
+            <div class="k">今月</div>
+            <div class="v" id="calMonthLabel">—</div>
+          </div>
+        </div>
+
+        <div class="calendar">
+          <div class="calBox">
+            <div class="calBg"></div>
+            <div class="calGlass">
+              <div class="calTop">
+                <div class="month" id="calTitle">—</div>
+                <div style="font-size:12px;color:rgba(34,34,34,.60);font-weight:900;">Sun–Sat</div>
+              </div>
+
+              <div class="calGrid" id="calGrid"></div>
+
+              <div style="padding:10px 4px 0;color:rgba(34,34,34,.55);font-size:11px;">
+                ※ 年末年始休みなどの注意書きもここに置ける想定
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3) 受注残：stock -->
+      <section class="card">
+        <div class="listTitle">受注残：stock</div>
+        <div class="list">
+          <div class="tableWrap">
+            <table class="table" aria-label="stock orders">
+              <thead class="thead">
+                <tr>
+                  <th style="width:46%;">名前</th>
+                  <th style="width:26%;">期日</th>
+                  <th style="width:18%;">進捗</th>
+                  <th style="width:10%; text-align:right;">担当</th>
+                </tr>
+              </thead>
+              <tbody id="stockBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4) 受注残：order -->
+      <section class="card">
+        <div class="listTitle">受注残：order</div>
+        <div class="list">
+          <div class="tableWrap">
+            <table class="table" aria-label="made-to-order">
+              <thead class="thead">
+                <tr>
+                  <th style="width:46%;">名前</th>
+                  <th style="width:26%;">期日</th>
+                  <th style="width:18%;">進捗</th>
+                  <th style="width:10%; text-align:right;">担当</th>
+                </tr>
+              </thead>
+              <tbody id="orderBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- OTHER -->
+    <main id="view-other" class="grid" style="display:none;">
+      <section class="card">
+        <div class="cardHead">
+          <div class="title">
+            <div class="h">OTHER</div>
+            <div class="s">ここは後で増やす</div>
+          </div>
+        </div>
+        <div style="padding:14px;color:rgba(34,34,34,.65);">準備中…</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    /* ===== 画面切替 ===== */
+    const tabs = document.querySelectorAll(".tab");
+    const viewHome = document.getElementById("view-home");
+    const viewOther = document.getElementById("view-other");
+
+    tabs.forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        tabs.forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        const v = btn.dataset.view;
+        viewHome.style.display = (v==="home") ? "" : "none";
+        viewOther.style.display = (v==="other") ? "" : "none";
+      });
+    });
+
+    /* ===== 1) 折れ線グラフ（ダミー） ===== */
+    const chartMount = document.getElementById("chartMount");
+    const chartTitle = document.getElementById("chartTitle");
+    const metricLabel = document.getElementById("metricLabel");
+    const metricValue = document.getElementById("metricValue");
+
+    const months = ["9月","10月","11月","12月","1月","2月","3月","4月","5月","6月","7月","8月"];
+    const orders = [3, 6, 9, 7, 8, 12, 10, 14, 9, 6, 11, 15];
+    const assets = [80000, 120000, 150000, 180000, 210000, 190000, 240000, 260000, 300000, 280000, 320000, 360000];
+
+    let mode = "orders";
+
+    function niceMax(v, step){
+      const m = Math.max(step, v);
+      return Math.ceil(m / step) * step;
+    }
+    function formatJPY(n){
+      return "¥" + Math.round(n).toLocaleString("ja-JP");
+    }
+
+    function renderChart(){
+      const isOrders = mode==="orders";
+      const series = isOrders ? orders : assets;
+      const unitStep = isOrders ? 10 : 100000;
+      const max = niceMax(Math.max(...series), unitStep);
+
+      const latest = series[series.length - 1];
+      chartTitle.textContent = isOrders ? "受注件数の推移" : "総資産の推移";
+      metricLabel.textContent = isOrders ? "受注件数" : "総資産";
+      metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
+
+      const M = 4;
+      const start = Math.max(0, series.length - M);
+      const xLabels = months.slice(start);
+      const yData = series.slice(start);
+
+      const W = 640, H = 220;
+      const padL = 42, padR = 16, padT = 14, padB = 42;
+      const innerW = W - padL - padR;
+      const innerH = H - padT - padB;
+
+      const xStep = innerW / (M - 1);
+
+      const pts = yData.map((y, i)=>{
+        const x = padL + i * xStep;
+        const yNorm = (y / max);
+        const py = padT + (1 - yNorm) * innerH;
+        return {x, y: py, v: y};
+      });
+
+      const path = pts.map((p,i)=> (i===0?`M ${p.x},${p.y}`:`L ${p.x},${p.y}`)).join(" ");
+
+      const gridYs = [0, max/2, max].map(v=>{
+        const yNorm = v / max;
+        return padT + (1 - yNorm) * innerH;
+      });
+
+      const labelFor = (v)=> {
+        if(isOrders) return `${v}`;
+        return `${Math.round(v/10000)}万`;
+      };
+
+      chartMount.innerHTML = `
+        <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block; border-radius:14px;">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(225,138,106,.32)"></stop>
+              <stop offset="100%" stop-color="rgba(225,138,106,0)"></stop>
+            </linearGradient>
+          </defs>
+
+          ${gridYs.map((y,idx)=>`
+            <line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="rgba(0,0,0,.10)" stroke-width="1" />
+            <text x="${padL-8}" y="${y+4}" text-anchor="end" font-size="11" fill="rgba(34,34,34,.55)" font-weight="900">
+              ${labelFor(idx===0?0:(idx===1?max/2:max))}
+            </text>
+          `).join("")}
+
+          <path d="${path} L ${pts[pts.length-1].x},${padT+innerH} L ${pts[0].x},${padT+innerH} Z" fill="url(#g1)"></path>
+
+          <path d="${path}" fill="none" stroke="rgba(225,138,106,.95)" stroke-width="3" stroke-linecap="round"></path>
+
+          ${pts.map(p=>`
+            <circle cx="${p.x}" cy="${p.y}" r="5" fill="rgba(255,255,255,.95)" stroke="rgba(34,34,34,.28)" stroke-width="2"></circle>
+          `).join("")}
+
+          ${xLabels.map((m,i)=>`
+            <text x="${padL + i*xStep}" y="${H-18}" text-anchor="middle" font-size="12"
+                  fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
+          `).join("")}
+        </svg>
+      `;
+    }
+
+    document.getElementById("card-chart").addEventListener("click", ()=>{
+      mode = (mode==="orders") ? "assets" : "orders";
+      renderChart();
+    });
+
+    renderChart();
+
+    /* ===== 2) カレンダー（見た目） ===== */
+    const calMonthLabel = document.getElementById("calMonthLabel");
+    const calTitle = document.getElementById("calTitle");
+    const calGrid = document.getElementById("calGrid");
+
+    const calYear = 2025, calMonth = 12;
+    calMonthLabel.textContent = `${calMonth}月`;
+    calTitle.textContent = `${calYear}.${String(calMonth).padStart(2,"0")}`;
+
+    const dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    calGrid.innerHTML = dows.map(d=>`<div class="dow">${d}</div>`).join("");
+
+    const first = new Date(calYear, calMonth-1, 1);
+    const firstDow = first.getDay();
+    const lastDay = new Date(calYear, calMonth, 0).getDate();
+
+    const events = {
+      10: [{t:"POP UP", style:"accent"}],
+      11: [{t:"POP UP", style:"accent"}],
+      12: [{t:"レインボー倉庫", style:"soft"}],
+      20: [{t:"story販売", style:"accent"}],
+      27: [{t:"定休日", style:"soft"}],
+      31: [{t:"定休日", style:"soft"}],
+    };
+
+    const totalCells = 42;
+    for(let i=0;i<totalCells;i++){
+      const dayNum = i - firstDow + 1;
+      if(dayNum < 1 || dayNum > lastDay){
+        calGrid.insertAdjacentHTML("beforeend", `<div class="day" style="opacity:.35;"></div>`);
+      }else{
+        const ev = events[dayNum] || [];
+        const pills = ev.map(e=>`<span class="pill ${e.style}">${e.t}</span>`).join("");
+        calGrid.insertAdjacentHTML("beforeend", `
+          <div class="day">
+            <div class="num">${dayNum}</div>
+            ${pills}
+          </div>
+        `);
+      }
+    }
+
+    /* ===== 3/4) 受注残（ダミー） ===== */
+    const stockBody = document.getElementById("stockBody");
+    const orderBody = document.getElementById("orderBody");
+
+    const stockRows = [
+      {name:"下駄箱標準PB", due:"2025/06/19", status:"進行中", st:"doing", assignees:["川原"]},
+      {name:"協議用図面作成", due:"2025/07/24", status:"進行中", st:"doing", assignees:["藤原","川原"]},
+      {name:"外壁サンプル全集め", due:"2025/07/31", status:"待ち", st:"wait", assignees:["藤原"]},
+      {name:"忘年会", due:"2025/12/20", status:"進行中", st:"doing", assignees:["川原"]},
+    ];
+
+    const orderRows = [
+      {name:"オーダー：バブーシュカA", due:"2025/06/28", status:"未着手", st:"todo", assignees:["藤原"]},
+      {name:"オーダー：ドレスB", due:"2025/07/05", status:"進行中", st:"doing", assignees:["川原"]},
+      {name:"オーダー：刺繍C", due:"2025/07/12", status:"完了", st:"done", assignees:["藤原","川原"]},
+    ];
+
+    function statusClass(st){
+      if(st==="doing") return "st-doing";
+      if(st==="wait") return "st-wait";
+      if(st==="done") return "st-done";
+      return "st-todo";
+    }
+
+    function renderRows(mount, rows){
+      mount.innerHTML = rows.map(r=>`
+        <tr class="row">
+          <td>
+            <div class="nameCell">
+              <span class="doc"></span>
+              <div>
+                <div style="font-weight:900;">${r.name}</div>
+                <div class="subCell"># 受注残</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:rgba(34,34,34,.75); font-weight:900;">${r.due}</td>
+          <td>
+            <span class="status ${statusClass(r.st)}"><span class="dot"></span>${r.status}</span>
+          </td>
+          <td>
+            <div class="assignees">
+              ${r.assignees.map(a=>`<span class="chip">${a}</span>`).join("")}
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    renderRows(stockBody, stockRows);
+    renderRows(orderBody, orderRows);
+  </script>
+</body>
+</html>
