@@ -49,6 +49,28 @@
       margin: 0 auto;
     }
 
+        /* chart: 縦スクロールは無効、横だけ */
+    .chartScroller{
+    overflow-x:auto;
+    overflow-y:hidden;
+    }
+
+    /* タップ切替の回転アニメ */
+    #card-chart.flip{
+    animation: flipSpin .55s ease;
+    transform-origin: center;
+    }
+    @keyframes flipSpin{
+    0%   { transform: rotateY(0deg); }
+    50%  { transform: rotateY(90deg); }
+    100% { transform: rotateY(180deg); }
+    }
+
+    /* motionが苦手な人向け */
+    @media (prefers-reduced-motion: reduce){
+    #card-chart.flip{ animation: none; }
+    }
+
     /* top switch */
     .topbar{
       display:flex; align-items:center; justify-content:space-between;
@@ -512,9 +534,9 @@
       });
     });
 
-    /* ===== 1) 折れ線グラフ（ダミー） ===== */
+    /* ===== 1) 棒グラフ（横スクロール / 縦軸は表示中範囲で可変） ===== */
     const chartMount = document.getElementById("chartMount");
-    const chartScroller = document.querySelector(".chartScroller"); // ← 追加
+    const chartScroller = document.querySelector(".chartScroller");
     const chartTitle = document.getElementById("chartTitle");
     const metricLabel = document.getElementById("metricLabel");
     const metricValue = document.getElementById("metricValue");
@@ -524,100 +546,115 @@
     const assets = [80000, 120000, 150000, 180000, 210000, 190000, 240000, 260000, 300000, 280000, 320000, 360000];
 
     let mode = "orders";
+    let rafScroll = 0;
 
-    function niceMax(v, step){
-      const m = Math.max(step, v);
-      return Math.ceil(m / step) * step;
-    }
     function formatJPY(n){
-      return "¥" + Math.round(n).toLocaleString("ja-JP");
+    return "¥" + Math.round(n).toLocaleString("ja-JP");
+    }
+    function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+
+    function getVisibleRange({ padL, xStep, N }){
+    const sl = chartScroller.scrollLeft;
+    const vw = chartScroller.clientWidth;
+    const start = Math.floor((sl - padL) / xStep);
+    const end   = Math.ceil(((sl + vw) - padL) / xStep);
+    return [clamp(start,0,N-1), clamp(end,0,N-1)];
     }
 
-function renderChart(){
-  const isOrders = mode==="orders";
-  const series = isOrders ? orders : assets;
+    function computeScale(series, i0, i1, isOrders){
+    const slice = series.slice(i0, i1 + 1);
+    let minV = Math.min(...slice);
+    let maxV = Math.max(...slice);
+    if(minV === maxV){
+        minV -= isOrders ? 1 : 20000;
+        maxV += isOrders ? 1 : 20000;
+    }
+    const range = maxV - minV;
+    const pad = range * 0.12;
+    let minS = minV - pad;
+    let maxS = maxV + pad;
+    if(isOrders){
+        minS = Math.max(0, Math.floor(minS));
+        maxS = Math.ceil(maxS);
+    }else{
+        minS = Math.floor(minS / 10000) * 10000;
+        maxS = Math.ceil(maxS / 10000) * 10000;
+    }
+    return { minS, maxS };
+    }
 
-  const unitStep = isOrders ? 10 : 100000;
-  const max = niceMax(Math.max(...series), unitStep);
+    function labelFor(v,isOrders){
+    return isOrders ? Math.round(v) : `${Math.round(v/10000)}万`;
+    }
 
-  const latest = series[series.length - 1];
-  chartTitle.textContent = isOrders ? "受注件数の推移" : "総資産の推移";
-  metricLabel.textContent = isOrders ? "受注件数" : "総資産";
-  metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
+    function renderChart({ keepScroll=true } = {}){
+    const isOrders = mode==="orders";
+    const series = isOrders ? orders : assets;
 
-  const N = series.length;        // ← 12ヶ月ぜんぶ描画
-  const xStep = 96;               // ← ここで「4ヶ月の見え具合」を調整（iPhone向け）
-  const W = 42 + 16 + xStep*(N-1);
-  const H = 220;
+    const N = series.length;
+    const xStep = 96;
+    const W = 42 + 16 + xStep*(N-1);
+    const H = 220;
 
-  const padL = 42, padR = 16, padT = 14, padB = 42;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
+    const padL=42, padR=16, padT=14, padB=42;
+    const innerH = H - padT - padB;
 
-  // 右端まで横スクロールできるように、描画領域(div)の幅も合わせる
-  chartMount.style.width = `${W}px`;
+    chartMount.style.width = `${W}px`;
+    const prevSL = chartScroller.scrollLeft;
 
-  const pts = series.map((y, i)=>{
-    const x = padL + i * xStep;
-    const yNorm = (y / max);
-    const py = padT + (1 - yNorm) * innerH;
-    return {x, y: py, v: y};
-  });
+    const [i0,i1] = getVisibleRange({ padL, xStep, N });
+    const { minS, maxS } = computeScale(series,i0,i1,isOrders);
 
-  const path = pts.map((p,i)=> (i===0?`M ${p.x},${p.y}`:`L ${p.x},${p.y}`)).join(" ");
+    const latest = series[N-1];
+    chartTitle.textContent = isOrders ? "受注件数の推移" : "総資産の推移";
+    metricLabel.textContent = isOrders ? "受注件数" : "総資産";
+    metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
 
-  const gridYs = [0, max/2, max].map(v=>{
-    const yNorm = v / max;
-    return padT + (1 - yNorm) * innerH;
-  });
+    const denom = (maxS - minS) || 1;
+    const yToPx = v => padT + (1 - (v - minS) / denom) * innerH;
 
-  const labelFor = (v)=> {
-    if(isOrders) return `${v}`;
-    return `${Math.round(v/10000)}万`;
-  };
+    const barW = 26;
 
-  chartMount.innerHTML = `
-    <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block; border-radius:14px;">
-      <defs>
-        <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="rgba(225,138,106,.32)"></stop>
-          <stop offset="100%" stop-color="rgba(225,138,106,0)"></stop>
-        </linearGradient>
-      </defs>
+    chartMount.innerHTML = `
+        <svg width="${W}" height="${H}">
+        ${series.map((v,i)=>{
+            const x = padL + i*xStep;
+            const y = yToPx(v);
+            const h = yToPx(minS) - y;
+            return `<rect x="${x-barW/2}" y="${y}" width="${barW}" height="${h}"
+            rx="8" fill="rgba(225,138,106,.9)"></rect>`;
+        }).join("")}
 
-      ${gridYs.map((y,idx)=>`
-        <line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="rgba(0,0,0,.10)" stroke-width="1" />
-        <text x="${padL-8}" y="${y+4}" text-anchor="end" font-size="11" fill="rgba(34,34,34,.55)" font-weight="900">
-          ${labelFor(idx===0?0:(idx===1?max/2:max))}
-        </text>
-      `).join("")}
+        ${months.map((m,i)=>`
+            <text x="${padL+i*xStep}" y="${H-18}" text-anchor="middle"
+            font-size="12" fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
+        `).join("")}
+        </svg>
+    `;
 
-      <path d="${path} L ${pts[pts.length-1].x},${padT+innerH} L ${pts[0].x},${padT+innerH} Z" fill="url(#g1)"></path>
-      <path d="${path}" fill="none" stroke="rgba(225,138,106,.95)" stroke-width="3" stroke-linecap="round"></path>
+    chartScroller.scrollLeft = keepScroll ? prevSL : chartScroller.scrollWidth;
+    }
 
-      ${pts.map(p=>`
-        <circle cx="${p.x}" cy="${p.y}" r="5" fill="rgba(255,255,255,.95)" stroke="rgba(34,34,34,.28)" stroke-width="2"></circle>
-      `).join("")}
-
-      ${months.map((m,i)=>`
-        <text x="${padL + i*xStep}" y="${H-18}" text-anchor="middle" font-size="12"
-              fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
-      `).join("")}
-    </svg>
-  `;
-
-  // ✅ 初期表示を「最新(右端)」にする
-  requestAnimationFrame(()=>{
-    chartScroller.scrollLeft = chartScroller.scrollWidth;
-  });
-}
-
-    document.getElementById("card-chart").addEventListener("click", ()=>{
-      mode = (mode==="orders") ? "assets" : "orders";
-      renderChart();
+    chartScroller.addEventListener("scroll", ()=>{
+    if(rafScroll) return;
+    rafScroll = requestAnimationFrame(()=>{
+        rafScroll=0;
+        renderChart({ keepScroll:true });
+    });
     });
 
-    renderChart();
+    const cardChart = document.getElementById("card-chart");
+    cardChart.addEventListener("click", ()=>{
+    cardChart.classList.add("flip");
+    setTimeout(()=>{
+        mode = mode==="orders" ? "assets" : "orders";
+        renderChart({ keepScroll:true });
+    },260);
+    setTimeout(()=>cardChart.classList.remove("flip"),560);
+    });
+
+    renderChart({ keepScroll:false });
+
 
     /* ===== 2) カレンダー（見た目） ===== */
     const calMonthLabel = document.getElementById("calMonthLabel");
