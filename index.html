@@ -3,21 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>e.nue Dashboard - page1(shell)</title>
+  <title>e.nue Dashboard</title>
 <style>
 :root{
   --bg1:#e3ddd4; --bg2:#d4ccc1;
-  --glass-bg: rgba(255,255,255,.86);
-  --glass-bg2: rgba(255,255,255,.78);
-  --glass-border: rgba(0,0,0,.06);
-  --shadow: 0 18px 45px rgba(0,0,0,.14);
-  --text-main:#222222; --text-sub:#555555;
-  --r:18px; --maxw:980px;
 
-  /* iPhone想定：間隔・タッチ感 */
-  --gap:12px;
-  --tile-r:18px;
+  /* 透明感（ガラス） */
+  --glass-1: rgba(255,255,255,.34);
+  --glass-2: rgba(255,255,255,.22);
+  --glass-3: rgba(255,255,255,.16);
+
+  --border-1: rgba(255,255,255,.55);
+
+  --shadow: 0 18px 45px rgba(0,0,0,.12);
+  --shadow2: 0 10px 26px rgba(0,0,0,.10);
+
+  --text-main:#222222;
+  --r:18px;
+  --maxw:980px;
+
+  /* iPhone前提：詰めても見切れない計算 */
+  --safe-pad: 14px;     /* .safe の左右paddingと一致させる */
+  --gap: 10px;          /* iPhone向けに少し詰める */
+  --tile-r: 18px;
+  --blur: 16px;
+  --icon: rgba(0,0,0,.72);
+
+  /* 3列で確実に収まる正方形サイズ（見切れ対策の肝） */
+  --tile-size: calc((100vw - (var(--safe-pad) * 2) - (var(--gap) * 2)) / 3);
 }
+
 *{ box-sizing:border-box; }
 html, body{ height:100%; }
 body{
@@ -25,60 +40,73 @@ body{
   font-family: system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif;
   color:var(--text-main);
   background:
-    radial-gradient(1200px 800px at 18% 8%, rgba(225,138,106,.18), transparent 55%),
-    radial-gradient(1200px 800px at 88% 0%, rgba(208,100,99,.14), transparent 52%),
+    radial-gradient(1200px 800px at 18% 8%, rgba(225,138,106,.20), transparent 55%),
+    radial-gradient(1200px 800px at 88% 0%, rgba(208,100,99,.16), transparent 52%),
     linear-gradient(135deg,var(--bg1),var(--bg2));
 }
+
 .safe{
-  padding:max(14px,env(safe-area-inset-top)) 14px max(18px,env(safe-area-inset-bottom));
+  padding:max(14px,env(safe-area-inset-top)) var(--safe-pad) max(18px,env(safe-area-inset-bottom));
   max-width:var(--maxw);
   margin:0 auto;
 }
+
 .topbar{
-  display:flex; justify-content:space-between; align-items:center;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
   margin:6px 0 14px;
 }
 .brand{ font-weight:900; letter-spacing:.02em; }
+
 .tabs{
   display:flex; gap:4px; padding:4px;
   border-radius:999px;
-  background:rgba(255,255,255,.55);
-  border:1px solid var(--glass-border);
-  box-shadow:var(--shadow);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+  background: linear-gradient(180deg, var(--glass-1), var(--glass-2));
+  border: 1px solid var(--border-1);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
 }
 .tab{
   border:0; background:transparent;
-  padding:10px 14px; border-radius:999px;
-  font-weight:800; cursor:pointer;
+  padding:10px 14px;
+  border-radius:999px;
+  font-weight:800;
+  cursor:pointer;
   color:rgba(34,34,34,.65);
+  -webkit-tap-highlight-color: transparent;
 }
 .tab.active{
-  background:rgba(255,255,255,.85);
+  background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.34));
+  border: 1px solid rgba(255,255,255,.65);
   color:var(--text-main);
-  box-shadow:0 8px 18px rgba(0,0,0,.08);
+  box-shadow: 0 8px 18px rgba(0,0,0,.10);
 }
+
 .grid{ display:flex; flex-direction:column; gap:14px; }
 
 .card{
-  background:linear-gradient(180deg,var(--glass-bg),var(--glass-bg2));
-  border:1px solid var(--glass-border);
+  background: linear-gradient(180deg, var(--glass-1), var(--glass-3));
+  border: 1px solid var(--border-1);
   border-radius:var(--r);
   box-shadow:var(--shadow);
   overflow:hidden;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
 }
 
-/* ===== HOME：空白の四角（そのまま） ===== */
+/* HOME */
 .slotCard{ padding:14px; }
 .slotBox{
   border-radius:16px;
-  border:1px dashed rgba(0,0,0,.20);
-  background:rgba(255,255,255,.35);
+  border:1px dashed rgba(0,0,0,.18);
+  background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.10));
   min-height:420px;
   padding:14px;
+  backdrop-filter: blur(calc(var(--blur) - 4px));
+  -webkit-backdrop-filter: blur(calc(var(--blur) - 4px));
 }
 .slotHint{
   font-weight:900;
@@ -86,7 +114,7 @@ body{
   font-size:12px;
 }
 
-/* ===== OTHER：3列の正方形ボタン ===== */
+/* OTHER */
 .otherCard{ padding:14px; }
 .tileGrid{
   display:grid;
@@ -94,23 +122,26 @@ body{
   gap: var(--gap);
 }
 
-/* 正方形タイル（iPhoneで押しやすい） */
 .tile{
+  position:relative;
   appearance:none;
   -webkit-appearance:none;
-  border:1px solid rgba(0,0,0,.14);
-  background: rgba(255,255,255,.30); /* “枠だけ”っぽい薄さ */
-  border-radius: var(--tile-r);
-  box-shadow: 0 12px 26px rgba(0,0,0,.08);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   width:100%;
-  aspect-ratio: 1 / 1;           /* 正方形 */
-  padding: 12px;
+  height: var(--tile-size);  /* ← iPhoneで確実に収める */
+  border-radius: var(--tile-r);
+
+  border: 1px solid rgba(255,255,255,.62);
+  background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.10));
+  box-shadow: var(--shadow2);
+
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+
+  padding: 11px;
   text-align:left;
   cursor:pointer;
-  -webkit-tap-highlight-color: transparent;
   user-select:none;
+  -webkit-tap-highlight-color: transparent;
 
   display:flex;
   flex-direction:column;
@@ -119,32 +150,64 @@ body{
 
   transition: transform .08s ease, background .12s ease, border-color .12s ease;
 }
-.tile:active{ transform: scale(.98); }
-.tile:hover{ background: rgba(255,255,255,.44); border-color: rgba(0,0,0,.18); }
-
-.tileTitle{
-  font-weight:900;
-  font-size:14px;
-  line-height:1.2;
+.tile::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius: var(--tile-r);
+  pointer-events:none;
+  border: 1px solid rgba(0,0,0,.06);
 }
-.tileSub{
-  font-weight:700;
-  font-size:11px;
-  color: rgba(34,34,34,.60);
-  line-height:1.2;
+.tile:active{ transform: scale(.985); }
+.tile:hover{
+  background: linear-gradient(180deg, rgba(255,255,255,.30), rgba(255,255,255,.14));
+  border-color: rgba(255,255,255,.75);
 }
 
-/* iPhone超小さい幅でも崩れにくく（3列維持したい場合） */
+/* アイコン */
+.tileIcon{
+  position:absolute;
+  top:10px;
+  left:10px;
+  width:26px;
+  height:26px;
+  display:grid;
+  place-items:center;
+  opacity:.95;
+}
+.tileIcon svg{
+  width:26px;
+  height:26px;
+  stroke: var(--icon);
+  stroke-width: 1.9;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tileTitle{ font-weight:900; font-size:13px; line-height:1.2; }
+.tileSub{ font-weight:700; font-size:10.5px; color: rgba(34,34,34,.60); line-height:1.2; }
+
+/* さらに小さい端末（SE級）でも余裕を作る */
 @media (max-width: 360px){
-  :root{ --gap:10px; }
+  :root{
+    --safe-pad: 12px;
+    --gap: 8px;
+    --tile-size: calc((100vw - (var(--safe-pad) * 2) - (var(--gap) * 2)) / 3);
+  }
   .tile{ padding:10px; }
-  .tileTitle{ font-size:13px; }
+  .tileIcon{ top:9px; left:9px; width:24px; height:24px; }
+  .tileIcon svg{ width:24px; height:24px; }
 }
 
-/* 逆にiPad/PCは余裕あるからちょい大きく見せる */
-@media (min-width: 700px){
-  :root{ --gap:14px; }
-  .tileTitle{ font-size:15px; }
+/* iPad以上は少し大きく（見やすさ） */
+@media (min-width: 600px){
+  :root{ --tile-size: 160px; --gap: 12px; }
+  .tileTitle{ font-size:14px; }
+  .tileSub{ font-size:11px; }
+}
+@media (min-width: 900px){
+  :root{ --tile-size: 180px; }
 }
 </style>
 </head>
@@ -172,10 +235,22 @@ body{
     <main id="view-other" class="grid" style="display:none;">
       <section class="card otherCard">
         <div class="tileGrid" id="tileGrid">
-          <!-- ▼ ここ：好きなだけ増やしてOK（3列で自動改行） -->
-          <button class="tile" type="button" data-href="items.html">
-            <div class="tileTitle">アイテム</div>
-            <div class="tileSub">items.html</div>
+
+          <!-- POS（レジアイコン付き） -->
+          <button class="tile" type="button" data-href="pos.html" aria-label="POSへ">
+            <div class="tileIcon" aria-hidden="true">
+              <!-- レジ（黒線）SVG -->
+              <svg viewBox="0 0 24 24">
+                <path d="M5 10h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-8z"/>
+                <path d="M8 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/>
+                <path d="M8 14h2M12 14h2M16 14h2"/>
+                <path d="M8 17h2M12 17h2M16 17h2"/>
+                <path d="M5 12h14"/>
+                <path d="M16 5h2v3"/>
+              </svg>
+            </div>
+            <div class="tileTitle">POS</div>
+            <div class="tileSub">pos.html</div>
           </button>
 
           <button class="tile" type="button" data-href="categories.html">
@@ -217,7 +292,7 @@ body{
             <div class="tileTitle">分析</div>
             <div class="tileSub">analytics.html</div>
           </button>
-          <!-- ▲ ここまで -->
+
         </div>
       </section>
     </main>
@@ -225,7 +300,6 @@ body{
 
 <script>
 (()=> {
-  // タブ切替（HOME/OTHER）
   const tabs = document.querySelectorAll(".tab");
   const viewHome = document.getElementById("view-home");
   const viewOther = document.getElementById("view-other");
@@ -241,9 +315,7 @@ body{
     });
   });
 
-  // OTHERタイル：押したらページ遷移
-  const grid = document.getElementById("tileGrid");
-  grid.addEventListener("click", (e)=>{
+  document.getElementById("tileGrid").addEventListener("click", (e)=>{
     const tile = e.target.closest(".tile");
     if(!tile) return;
     const href = tile.dataset.href;
