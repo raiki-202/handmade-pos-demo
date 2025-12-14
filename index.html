@@ -96,7 +96,6 @@ body{
 
 /* =====================================================
    “非3D” flip（Safariでもスクロール壊れない）
-   ＋モザイク演出
 ===================================================== */
 .hint{ display:none; }
 .cardFlip{ position:relative; cursor:pointer; }
@@ -112,18 +111,14 @@ body{
   background: linear-gradient(180deg,var(--glass-bg),var(--glass-bg2));
   opacity:0;
   pointer-events:none;
-  transition: opacity .60s ease;            /* ★ゆっくり */
+  transition: opacity .75s ease;
   will-change: opacity, filter;
 }
 .cardFace.front{ opacity:1; pointer-events:auto; }
 .cardFlip.is-flipped .cardFace.front{ opacity:0; pointer-events:none; }
 .cardFlip.is-flipped .cardFace.back { opacity:1; pointer-events:auto; }
 
-/* ===== 上品な切替演出：薄いベール＋ぼかし＋ディゾルブ ===== */
-.cardFace{
-  transition: opacity .75s ease; /* ★ゆっくり上品 */
-}
-
+/* 上品な切替演出 */
 .cardFace::after{
   content:"";
   position:absolute;
@@ -139,12 +134,7 @@ body{
   transform: translateY(-6px);
   transition: opacity .75s ease, transform .75s ease, filter .75s ease;
 }
-
-/* 切替中だけ：軽く霞ませて“ベールがかかる” */
-.cardFlip.is-animating .cardFace{
-  filter: blur(2.2px) saturate(1.03);
-}
-
+.cardFlip.is-animating .cardFace{ filter: blur(2.2px) saturate(1.03); }
 .cardFlip.is-animating .cardFace::after{
   opacity:1;
   transform: translateY(0);
@@ -163,13 +153,13 @@ body{
 
 .badgeBig{
   text-align:right;
-  min-width: 88px;          /* ★iPhoneで潰れにくく */
+  min-width: 88px;
   flex: 0 0 auto;
 }
 .badgeBig .k{
   font-size:11px; font-weight:800; color:rgba(34,34,34,.55);
-  white-space:nowrap;       /* ★受注件数を改行させない */
-  display:inline-block;     /* ★確実に折らせない */
+  white-space:nowrap;
+  display:inline-block;
 }
 .badgeBig .v{ font-size:18px; font-weight:900; }
 
@@ -177,7 +167,7 @@ body{
 .chartWrap{
   padding:12px 0;
   overflow:hidden;
-  cursor:default; /* グラフ周辺は“操作領域”っぽく */
+  cursor:default;
 }
 .chartFrame{ position:relative; padding:0 12px 10px; }
 
@@ -188,7 +178,7 @@ body{
   z-index:2;
 }
 
-/* スクロール領域（これが本体） */
+/* スクロール領域 */
 .chartScroller{
   overflow-x:auto;
   overflow-y:hidden;
@@ -211,106 +201,386 @@ body{
   -webkit-user-select:none;
 }
 
-.hint{ padding:0 14px 14px; font-size:12px; color:rgba(34,34,34,.55); }
-.tapHint{
-  display:inline-flex; gap:8px; align-items:center;
-  padding:8px 10px; border-radius:999px;
-  background:rgba(255,255,255,.62);
-  border:1px solid rgba(0,0,0,.06);
-  cursor:pointer;
-  user-select:none;
-  -webkit-user-select:none;
-}
-
 /* ===== tooltip（SVG内） ===== */
 .chartTooltip{ pointer-events:none; }
 .chartTooltip rect{ fill: rgba(34,34,34,.92); rx:8; }
 .chartTooltip text{ fill:#fff; font-size:12px; font-weight:900; }
 
-/* ===== calendar ===== */
-.calendar{ padding:12px; }
-.calBox{
-  position:relative; border-radius:14px; overflow:hidden;
+/* ===== section2 (calendar) ===== */
+:root{ --cell:52px; } /* fallback */
+.secCal .calendar{ padding:12px; }
+.secCal .calBox{
+  border-radius:14px;
   border:1px solid rgba(0,0,0,.08);
-  background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,.52));
+  background:rgba(255,255,255,.60);
+  overflow:hidden;
 }
-.calBg{
-  position:absolute; inset:0;
-  background:
-    radial-gradient(600px 360px at 20% 20%, rgba(255,255,255,.55), transparent 60%),
-    radial-gradient(600px 420px at 80% 30%, rgba(225,138,106,.22), transparent 60%);
+.secCal .calTop{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 10px 8px;
+  font-weight:900; gap:10px;
 }
-.calGlass{
-  position:relative;
-  padding:10px;
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+.secCal .calTopLeft,.secCal .calTopRight{ display:flex; align-items:center; gap:8px; }
+.secCal .navBtn,.secCal .todayBtn,.secCal .modeBtn{
+  appearance:none; border:1px solid rgba(0,0,0,.10);
+  background:rgba(255,255,255,.75);
+  border-radius:999px;
+  padding:8px 10px;
+  font-weight:900;
+  font-size:12px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.08);
+  cursor:pointer;
 }
-.calTop{ display:flex; justify-content:space-between; padding:6px 4px 10px; font-weight:900; }
-.calGrid{
+.secCal .navBtn:active,.secCal .todayBtn:active,.secCal .modeBtn:active{ transform:translateY(1px); }
+.secCal .navBtn[disabled]{ opacity:.35; cursor:not-allowed; }
+.secCal .monthLabel{ font-weight:1000; letter-spacing:.2px; }
+.secCal .calViewport{ position:relative; overflow:hidden; border-top:1px solid rgba(0,0,0,.06); }
+.secCal .calGrid{
   display:grid;
   grid-template-columns:repeat(7,1fr);
   gap:1px;
   background:rgba(0,0,0,.08);
-  border-radius:12px;
-  overflow:hidden;
+  will-change: transform, opacity;
 }
-.dow,.day{ min-height:46px; padding:6px; font-size:12px; background:rgba(255,255,255,.45); }
-.dow{ text-align:center; font-weight:900; background:rgba(255,255,255,.65); }
-.day{ position:relative; }
-.num{ position:absolute; top:6px; left:6px; font-weight:900; }
-.pill{
-  display:inline-block;
-  margin-top:18px; padding:4px 8px; border-radius:999px;
-  font-size:11px; font-weight:900;
-  background:rgba(255,255,255,.75);
-  border:1px solid rgba(0,0,0,.06);
+.secCal .dow,.secCal .day{
+  background:rgba(255,255,255,.62);
+  padding:6px;
+  font-size:12px;
+  min-height: var(--cell);
+  height: var(--cell);
 }
-.pill.accent{
-  color:#fff;
-  background:linear-gradient(180deg,rgba(225,138,106,.95),rgba(208,100,99,.92));
+.secCal .dow{
+  text-align:center;
+  font-weight:1000;
+  display:flex; align-items:center; justify-content:center;
+  user-select:none;
 }
-.pill.soft{
-  color:rgba(34,34,34,.72);
-  background:rgba(255,255,255,.68);
+.secCal .day{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  border:none;
+  width:100%;
+  text-align:left;
+  cursor:pointer;
+  user-select:none;
+  touch-action:manipulation;
+}
+.secCal .day.dim{ opacity:.45; }
+.secCal .num{
+  font-weight:1000;
+  line-height:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:26px; height:26px;
+  border-radius:999px;
+}
+.secCal .centerMark{
+  margin-top:auto;
+  margin-bottom:4px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height: 22px;
+}
+.secCal .stamp{
+  display:inline-grid;
+  grid-template-rows:auto auto;
+  place-items:center;
+  padding:6px 10px 7px;
+  border-radius:999px;
+  border:2px solid rgba(0,0,0,.12);
+  background: rgba(255,255,255,.78);
+  box-shadow:
+    0 10px 18px rgba(0,0,0,.10),
+    inset 0 0 0 2px rgba(225,138,106,.35);
+  transform: rotate(-10deg);
+}
+.secCal .stamp span{
+  font-weight:1000;
+  font-size:11px;
+  line-height:1.05;
+  letter-spacing:.6px;
+  color: var(--accent2);
+}
+.secCal .eventDot{
+  width:10px; height:10px;
+  border-radius:999px;
+  box-shadow:
+    0 10px 16px rgba(0,0,0,.10),
+    inset 0 0 0 2px rgba(255,255,255,.85);
+}
+.secCal .eventDot.orange{ background: rgba(225,138,106,.95); }
+.secCal .eventDot.blue{ background: rgba(109,120,216,.95); }
+.secCal .eventDot.red{ background: rgba(208,100,99,.95); }
+.secCal .eventDot.gray{ background: rgba(34,34,34,.28); }
+.secCal .day.dim .eventDot,
+.secCal .day.dim .stamp{ opacity:.45; transform: rotate(-10deg) scale(.92); }
+
+/* 土日・祝 */
+.secCal .day.sun{ background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.62)), rgba(208,100,99,.16); }
+.secCal .day.sat{ background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.62)), rgba(109,120,216,.16); }
+.secCal .day.holiday{ background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.62)), rgba(208,100,99,.20); }
+.secCal .day.sun .num, .secCal .day.holiday .num{ color: var(--accent2); }
+.secCal .day.sat .num{ color: rgba(109,120,216,.95); }
+
+/* 今日 */
+.secCal .day.today .num{
+  box-shadow:
+    0 0 0 2px rgba(225,138,106,.30),
+    0 0 14px rgba(225,138,106,.45);
+  background: rgba(255,255,255,.75);
 }
 
-/* ===== table ===== */
-.listTitle{ padding:12px 14px 6px; font-weight:900; }
-.list{ padding:10px 12px 12px; }
-.tableWrap{
-  overflow:auto;
-  -webkit-overflow-scrolling:touch;
-  touch-action: pan-x pan-y;
+/* スライド */
+.secCal .slideEnterRight{ transform: translateX(14%); opacity:0; }
+.secCal .slideEnterLeft { transform: translateX(-14%); opacity:0; }
+.secCal .slideActive{ transform: translateX(0%); opacity:1; transition: transform .28s ease, opacity .28s ease; }
+.secCal .slideExitLeft{ transform: translateX(-14%); opacity:0; transition: transform .28s ease, opacity .28s ease; position:absolute; inset:0; }
+.secCal .slideExitRight{ transform: translateX(14%); opacity:0; transition: transform .28s ease, opacity .28s ease; position:absolute; inset:0; }
+
+/* 吹き出し（class名は .popover に統一） */
+.popover{
+  position:fixed;
+  z-index:9999;
+  max-width:min(320px, calc(100vw - 28px));
+  background: rgba(255,255,255,.92);
+  border:1px solid rgba(0,0,0,.10);
   border-radius:14px;
+  box-shadow: 0 22px 55px rgba(0,0,0,.18);
+  padding:10px 12px;
+  transform-origin: top left;
+  animation: secCalPop .12s ease;
 }
-.table{
-  width:100%; min-width:520px;
-  border-collapse:separate; border-spacing:0;
-  border-radius:14px;
-  border:1px solid rgba(0,0,0,.08);
-  background:rgba(255,255,255,.55);
+@keyframes secCalPop{
+  from{ transform: scale(.98); opacity:0; }
+  to{ transform: scale(1); opacity:1; }
 }
-.thead th{
-  position:sticky; top:0;
-  padding:10px;
+.secCal .popHead{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.secCal .popTitle{ font-weight:1000; }
+.secCal .popSub{ font-size:12px; color:rgba(0,0,0,.55); margin-top:2px; }
+.secCal .iconBtn{
+  appearance:none;
+  border:1px solid rgba(0,0,0,.10);
+  background:rgba(255,255,255,.75);
+  border-radius:12px;
+  padding:6px 8px;
+  cursor:pointer;
+  box-shadow: 0 8px 18px rgba(0,0,0,.08);
+  font-weight:1000;
+  font-size:14px;
+  line-height:1;
+}
+.secCal .iconBtn:active{ transform:translateY(1px); }
+.secCal .popRow{ margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+.secCal .badge{
+  display:inline-flex; align-items:center; gap:6px;
   font-size:12px; font-weight:900;
-  background:rgba(255,255,255,.7);
-  z-index:1;
-}
-.row td{ padding:10px; border-bottom:1px solid rgba(0,0,0,.06); }
-.status{
-  display:inline-flex; gap:8px; align-items:center;
   padding:6px 10px;
   border-radius:999px;
-  font-size:12px; font-weight:900;
-  background:rgba(255,255,255,.68);
+  background: rgba(225,138,106,.16);
+  border: 1px solid rgba(225,138,106,.28);
 }
-.dot{ width:10px; height:10px; border-radius:999px; }
-.st-doing .dot{ background:var(--ok); }
-.st-wait  .dot{ background:var(--wait); }
-.st-done  .dot{ background:var(--done); }
-.st-todo  .dot{ background:var(--todo); }
+.secCal .badge.blue{ background: rgba(109,120,216,.14); border-color: rgba(109,120,216,.24); }
+.secCal .badge.red{ background: rgba(208,100,99,.14); border-color: rgba(208,100,99,.24); }
+.secCal .editBox{
+  margin-top:10px;
+  padding:10px;
+  border-radius:12px;
+  border:1px dashed rgba(0,0,0,.18);
+  background: rgba(255,255,255,.72);
+  display:none;
+}
+.secCal .editBox.show{ display:block; }
+.secCal .editBox label{ display:block; font-size:12px; color:rgba(0,0,0,.55); font-weight:900; margin-bottom:6px; }
+.secCal .editRow{ display:flex; gap:8px; align-items:center; }
+.secCal .dateInput{
+  flex:1; appearance:none;
+  border:1px solid rgba(0,0,0,.14);
+  border-radius:12px;
+  padding:10px 10px;
+  background: rgba(255,255,255,.85);
+  font-weight:900;
+}
+.secCal .saveBtn{
+  appearance:none; border:none;
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:1000;
+  background: rgba(225,138,106,.95);
+  color:#fff;
+  box-shadow: 0 10px 18px rgba(0,0,0,.12);
+  cursor:pointer;
+}
+.secCal .saveBtn:active{ transform:translateY(1px); }
+.secCal .note{ margin-top:8px; font-size:11px; color:rgba(0,0,0,.55); opacity:.85; }
+.secCal .closeHint{ margin-top:10px; font-size:11px; color: rgba(0,0,0,.55); opacity:.75; }
+
+@supports (aspect-ratio: 1 / 1){
+  .secCal .day{ aspect-ratio: 1 / 1; height:auto; min-height:auto; }
+  .secCal .dow{ height:auto; min-height:34px; }
+}
+@media (max-width: 380px){
+  .secCal .calendar{ padding:10px; }
+  .secCal .dow,.secCal .day{ padding:5px; }
+  .secCal .num{ width:24px; height:24px; }
+}
+
+/* ===== section3/4 (orders tables) ===== */
+.secOrders .tableWrap{ overflow:auto; -webkit-overflow-scrolling:touch; }
+.secOrders .ordersTable{ width:100%; border-collapse:collapse; min-width:720px; }
+.secOrders .ordersTable th,.secOrders .ordersTable td{ padding:10px; font-size:13px; vertical-align:middle; }
+.secOrders .ordersTable th{ text-align:left; background:#f3f3f3; position:sticky; top:0; z-index:1; }
+.secOrders .ordersTable tr+tr td{ border-top:1px solid rgba(0,0,0,.06); }
+
+.secOrders .tap{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,.10);
+  background:rgba(255,255,255,.7);
+  cursor:pointer;
+  user-select:none;
+  max-width:100%;
+}
+.secOrders .tap:active{ transform: translateY(1px); }
+
+.secOrders .nameBtn{
+  border:none; background:transparent; padding:0; margin:0;
+  cursor:pointer; text-align:left; font:inherit; color:inherit;
+  display:inline-flex; align-items:center; gap:8px;
+}
+.secOrders .nameBtn .chev{ opacity:.55; font-weight:900; }
+.secOrders .duePill{ white-space:nowrap; }
+
+.secOrders .statusPill{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:2px solid rgba(0,0,0,.12);
+  font-weight:900;
+  background:rgba(255,255,255,.85);
+  white-space:nowrap;
+}
+.secOrders .dot{
+  width:8px; height:8px; border-radius:50%;
+  background:rgba(0,0,0,.35);
+  box-shadow:0 0 0 3px rgba(0,0,0,.06);
+  flex:0 0 auto;
+}
+.secOrders .s-michakushu{ border-color: rgba(139,139,139,.55); }
+.secOrders .s-michakushu .dot{ background:rgba(62,62,62,1); box-shadow:0 0 0 3px rgba(139,139,139,.18); }
+
+.secOrders .s-nyuukin{ border-color: rgba(240,163,58,.70); }
+.secOrders .s-nyuukin .dot{ background:rgba(185,98,0,1); box-shadow:0 0 0 3px rgba(240,163,58,.22); }
+
+.secOrders .s-shinkochu{ border-color: rgba(47,191,122,.70); }
+.secOrders .s-shinkochu .dot{ background:rgba(15,122,69,1); box-shadow:0 0 0 3px rgba(47,191,122,.20); }
+
+/* 完了（保険。表示はしないフィルタだけど） */
+.secOrders .s-done{ border-color: rgba(109,120,216,.70); }
+.secOrders .s-done .dot{ background:rgba(66,76,175,1); box-shadow:0 0 0 3px rgba(109,120,216,.20); }
+
+.secOrders .chips{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+.secOrders .chip{
+  display:inline-flex; align-items:center;
+  padding:5px 8px;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,.14);
+  background:rgba(0,0,0,.03);
+  font-weight:800;
+  white-space:nowrap;
+}
+.secOrders .chip.muted{ opacity:.55; font-weight:700; }
+.emptyOrders{ padding:18px 14px; color:rgba(0,0,0,.55); font-weight:800; }
+
+/* mobile card rows */
+@media (max-width: 620px){
+  .secOrders .tableWrap{ overflow:visible; }
+  .secOrders .ordersTable{ min-width:0; }
+  .secOrders .ordersTable thead{ display:none; }
+  .secOrders .ordersTable tr{ display:block; padding:10px 12px; border-top:1px solid rgba(0,0,0,.07); }
+  .secOrders .ordersTable tr:first-child{ border-top:none; }
+  .secOrders .ordersTable tr+tr td{ border-top:none; }
+  .secOrders .ordersTable td{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; font-size:13px; }
+  .secOrders .ordersTable td::before{
+    content: attr(data-label);
+    color:rgba(0,0,0,.55);
+    font-weight:800;
+    margin-right:10px;
+    flex:0 0 auto;
+  }
+}
+
+/* bottom sheet (shared) */
+.enueOverlay{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.35);
+  display:none;
+  align-items:flex-end;
+  z-index:999;
+  padding:10px;
+}
+.enueOverlay.show{ display:flex; }
+.enueSheet{
+  width:min(640px,100%);
+  margin:0 auto;
+  background:#fff;
+  border-radius:22px;
+  box-shadow:0 30px 80px rgba(0,0,0,.35);
+  overflow:hidden;
+}
+.enueSheetHead{
+  padding:12px 14px;
+  border-bottom:1px solid rgba(0,0,0,.08);
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  font-weight:900;
+}
+.enueSheetBody{ padding:12px 14px; }
+.enueSheetFoot{
+  padding:12px 14px;
+  border-top:1px solid rgba(0,0,0,.08);
+  display:flex; gap:10px;
+}
+.enueBtn{
+  flex:1;
+  border:none;
+  border-radius:14px;
+  padding:12px 12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.enueBtnGhost{ background:rgba(0,0,0,.06); }
+.enueBtnPrimary{ background:#111; color:#fff; }
+
+.enueOptList{ display:grid; gap:10px; }
+.enueOpt{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 12px;
+  border-radius:16px;
+  border:1px solid rgba(0,0,0,.12);
+  cursor:pointer;
+  user-select:none;
+}
+.enueOpt:active{ transform: translateY(1px); }
+.enueOpt .left{ display:flex; align-items:center; gap:10px; font-weight:900; }
+.enueOpt .right{ color:rgba(0,0,0,.55); font-weight:800; }
+.enueCheck{
+  width:18px; height:18px;
+  border-radius:6px;
+  border:2px solid rgba(0,0,0,.25);
+  background:transparent;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:900;
+}
+.enueCheck.on{ background:#111; border-color:#111; color:#fff; }
+
+.enueHiddenDate{
+  position:fixed; left:-9999px; top:-9999px;
+  opacity:0; pointer-events:none;
+}
 
 @media (prefers-reduced-motion: reduce){
   .cardFace{ transition:none; }
@@ -396,33 +666,37 @@ body{
         </div>
       </section>
 
-      <!-- 2) カレンダー枠 -->
+      <!-- 2) カレンダー -->
       <section class="card">
         <div class="cardHead">
           <div class="title">
             <div class="h">カレンダー</div>
-            <div class="s">見た目のみ（入れ方は指示待ち）</div>
+            <div class="s">予定日の吹き出しに✏️を付けて日付変更（ローカル保存）</div>
           </div>
           <div class="badgeBig">
-            <div class="k">今月</div>
-            <div class="v" id="calMonthLabel">—</div>
+            <div class="k">表示月</div>
+            <div class="v" id="monthLabelMini">—</div>
           </div>
         </div>
 
-        <div class="calendar">
-          <div class="calBox">
-            <div class="calBg"></div>
-            <div class="calGlass">
+        <div class="secCal">
+          <div class="calendar">
+            <div class="calBox" id="calBox">
               <div class="calTop">
-                <div class="month" id="calTitle">—</div>
-                <div style="font-size:12px;color:rgba(34,34,34,.60);font-weight:900;">Sun–Sat</div>
+                <div class="calTopLeft">
+                  <button class="todayBtn" id="todayBtn" type="button">today</button>
+                  <button class="navBtn" id="prevBtn" type="button">≪</button>
+                  <button class="navBtn" id="nextBtn" type="button">≫</button>
+                </div>
+
+                <div class="monthLabel" id="monthLabel">----</div>
+
+                <div class="calTopRight">
+                  <button class="modeBtn" id="modeBtn" type="button">Sun–Sat</button>
+                </div>
               </div>
 
-              <div class="calGrid" id="calGrid"></div>
-
-              <div style="padding:10px 4px 0;color:rgba(34,34,34,.55);font-size:11px;">
-                ※ 年末年始休みなどの注意書きもここに置ける想定
-              </div>
+              <div class="calViewport" id="calViewport"></div>
             </div>
           </div>
         </div>
@@ -431,19 +705,20 @@ body{
       <!-- 3) 受注残：stock -->
       <section class="card">
         <div class="listTitle">受注残：stock</div>
-        <div class="list">
+        <div class="list secOrders" id="secStock">
           <div class="tableWrap">
-            <table class="table" aria-label="stock orders">
+            <table class="ordersTable" aria-label="stock orders">
               <thead class="thead">
                 <tr>
                   <th style="width:46%;">名前</th>
-                  <th style="width:26%;">期日</th>
-                  <th style="width:18%;">進捗</th>
-                  <th style="width:10%; text-align:right;">担当</th>
+                  <th style="width:22%;">期日</th>
+                  <th style="width:20%;">進捗</th>
+                  <th style="width:12%; text-align:right;">担当</th>
                 </tr>
               </thead>
-              <tbody id="stockBody"></tbody>
+              <tbody id="tbodyStock"></tbody>
             </table>
+            <div id="emptyStock" class="emptyOrders" style="display:none;">表示できるデータがありません（マルシェ以外の購入履歴が未作成）</div>
           </div>
         </div>
       </section>
@@ -451,23 +726,40 @@ body{
       <!-- 4) 受注残：order -->
       <section class="card">
         <div class="listTitle">受注残：order</div>
-        <div class="list">
+        <div class="list secOrders" id="secOrder">
           <div class="tableWrap">
-            <table class="table" aria-label="made-to-order">
+            <table class="ordersTable" aria-label="made-to-order">
               <thead class="thead">
                 <tr>
                   <th style="width:46%;">名前</th>
-                  <th style="width:26%;">期日</th>
-                  <th style="width:18%;">進捗</th>
-                  <th style="width:10%; text-align:right;">担当</th>
+                  <th style="width:22%;">期日</th>
+                  <th style="width:20%;">進捗</th>
+                  <th style="width:12%; text-align:right;">担当</th>
                 </tr>
               </thead>
-              <tbody id="orderBody"></tbody>
+              <tbody id="tbodyOrder"></tbody>
             </table>
+            <div id="emptyOrder" class="emptyOrders" style="display:none;">表示できるデータがありません（マルシェ以外の購入履歴が未作成）</div>
           </div>
         </div>
       </section>
 
+      <!-- Stock/Order 共通：Bottom sheet -->
+      <div class="enueOverlay" id="overlayOrders" role="dialog" aria-modal="true">
+        <div class="enueSheet" onclick="event.stopPropagation()">
+          <div class="enueSheetHead">
+            <div id="sheetTitle">編集</div>
+            <button class="enueBtn enueBtnGhost" style="flex:0 0 auto; padding:10px 12px;" id="closeBtn">閉じる</button>
+          </div>
+          <div class="enueSheetBody" id="sheetBody"></div>
+          <div class="enueSheetFoot" id="sheetFoot" style="display:none;">
+            <button class="enueBtn enueBtnGhost" id="cancelBtn">キャンセル</button>
+            <button class="enueBtn enueBtnPrimary" id="saveBtn">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <input class="enueHiddenDate" id="datePicker" type="date" />
     </main>
 
     <!-- OTHER -->
@@ -486,491 +778,1170 @@ body{
 
 <script>
 (()=> {
-  /* ===== 画面切替 ===== */
-  const tabs = document.querySelectorAll(".tab");
-  const viewHome = document.getElementById("view-home");
-  const viewOther = document.getElementById("view-other");
+  try{
+    /* ===== 画面切替 ===== */
+    const tabs = document.querySelectorAll(".tab");
+    const viewHome = document.getElementById("view-home");
+    const viewOther = document.getElementById("view-other");
 
-  tabs.forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      tabs.forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-      const v = btn.dataset.view;
-      viewHome.style.display = (v==="home") ? "" : "none";
-      viewOther.style.display = (v==="other") ? "" : "none";
+    tabs.forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        tabs.forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        const v = btn.dataset.view;
+        viewHome.style.display = (v==="home") ? "" : "none";
+        viewOther.style.display = (v==="other") ? "" : "none";
+      });
     });
-  });
 
-  /* ===== データ ===== */
-  const months = ["9月","10月","11月","12月","1月","2月","3月","4月","5月","6月","7月","8月"];
-  const orders = [3,6,9,7,8,12,10,14,9,6,11,15];
-  const assets = [80000,120000,150000,180000,210000,190000,240000,260000,300000,280000,320000,360000];
+    /* ===== グラフ用データ（※名前衝突しないように改名） ===== */
+    const months = ["9月","10月","11月","12月","1月","2月","3月","4月","5月","6月","7月","8月"];
+    const ordersSeries = [3,6,9,7,8,12,10,14,9,6,11,15];
+    const assetsSeries = [80000,120000,150000,180000,210000,190000,240000,260000,300000,280000,320000,360000];
 
-  const formatJPY = n => "¥" + Math.round(n).toLocaleString("ja-JP");
-  const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
-  const down5 = v => Math.floor(v/5)*5;
-  const up5   = v => Math.ceil(v/5)*5;
+    const formatJPY = n => "¥" + Math.round(n).toLocaleString("ja-JP");
+    const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
+    const down5 = v => Math.floor(v/5)*5;
+    const up5   = v => Math.ceil(v/5)*5;
 
-  /* ===== flip要素 ===== */
-  const cardChart = document.getElementById("card-chart");
-  const flipHintA = document.getElementById("flipHintA");
-  const flipHintB = document.getElementById("flipHintB");
+    /* ===== flip要素 ===== */
+    const cardChart = document.getElementById("card-chart");
+    const flipHintA = document.getElementById("flipHintA");
+    const flipHintB = document.getElementById("flipHintB");
 
-  // 「タップで〜切り替え」文言は消す（余白ごと消したいなら .hint をCSSでdisplay:none でもOK）
-  if(flipHintA) flipHintA.style.display = "none";
-  if(flipHintB) flipHintB.style.display = "none";
+    if(flipHintA) flipHintA.style.display = "none";
+    if(flipHintB) flipHintB.style.display = "none";
 
-  const A = {
-    mount: document.getElementById("chartMountA"),
-    yAxis: document.getElementById("yAxisFixedA"),
-    scroller: document.getElementById("chartScrollerA"),
-    metricValue: document.getElementById("metricValueA"),
-    _pts:[],
-    // スケールアニメ用
-    scale: null,        // {minS,maxS,step,ticks,isOrders}
-    anim: null          // {from,to,start,dur,raf}
-  };
-  const B = {
-    mount: document.getElementById("chartMountB"),
-    yAxis: document.getElementById("yAxisFixedB"),
-    scroller: document.getElementById("chartScrollerB"),
-    metricValue: document.getElementById("metricValueB"),
-    _pts:[],
-    scale: null,
-    anim: null
-  };
+    const A = {
+      mount: document.getElementById("chartMountA"),
+      yAxis: document.getElementById("yAxisFixedA"),
+      scroller: document.getElementById("chartScrollerA"),
+      metricValue: document.getElementById("metricValueA"),
+      _pts:[],
+      scale: null,
+      anim: null
+    };
+    const B = {
+      mount: document.getElementById("chartMountB"),
+      yAxis: document.getElementById("yAxisFixedB"),
+      scroller: document.getElementById("chartScrollerB"),
+      metricValue: document.getElementById("metricValueB"),
+      _pts:[],
+      scale: null,
+      anim: null
+    };
 
-  let isFlipped = false;
+    let isFlipped = false;
 
-  /* ===== 表示範囲 ===== */
-  function getVisibleRange(scroller, {padL,xStep,N}){
-    const sl = scroller.scrollLeft;
-    const vw = scroller.clientWidth;
-    const s  = Math.floor((sl-padL)/xStep);
-    const e  = Math.ceil(((sl+vw)-padL)/xStep);
-    return [clamp(s,0,N-1), clamp(e,0,N-1)];
-  }
-
-  /* ===== スケール計算 ===== */
-  function computeScale(series,i0,i1,isOrders){
-    const slice = series.slice(i0,i1+1);
-    let minV = Math.min(...slice);
-    let maxV = Math.max(...slice);
-
-    const range = (maxV-minV) || 1;
-    const pad = range*0.05;
-
-    let minS = minV - pad;
-    let maxS = maxV + pad;
-
-    if(isOrders){
-      minS = down5(minS);
-      maxS = up5(maxS);
-      if(maxS - minS < 20) maxS = minS + 20;
-      if(maxS === minS) maxS = minS + 20;
-      return {minS,maxS,step:null};
-    }else{
-      const base = 50000; // 5万刻み
-      minS = Math.floor(minS/base)*base;
-      maxS = Math.ceil (maxS/base)*base;
-
-      let step = Math.ceil(((maxS - minS) / 4) / base) * base;
-      if(step < base) step = base;
-
-      maxS = minS + step*4;
-      return {minS,maxS,step};
+    /* ===== 表示範囲 ===== */
+    function getVisibleRange(scroller, {padL,xStep,N}){
+      const sl = scroller.scrollLeft;
+      const vw = scroller.clientWidth;
+      const s  = Math.floor((sl-padL)/xStep);
+      const e  = Math.ceil(((sl+vw)-padL)/xStep);
+      return [clamp(s,0,N-1), clamp(e,0,N-1)];
     }
-  }
 
-  function makeTicksFromScale(scale){
-    const {minS,maxS,step} = scale;
-    const arr=[];
-    if(step){
-      for(let i=0;i<5;i++) arr.push(minS + step*i);
+    /* ===== スケール計算 ===== */
+    function computeScale(series,i0,i1,isOrders){
+      const slice = series.slice(i0,i1+1);
+      let minV = Math.min(...slice);
+      let maxV = Math.max(...slice);
+
+      const range = (maxV-minV) || 1;
+      const pad = range*0.05;
+
+      let minS = minV - pad;
+      let maxS = maxV + pad;
+
+      if(isOrders){
+        minS = down5(minS);
+        maxS = up5(maxS);
+        if(maxS - minS < 20) maxS = minS + 20;
+        if(maxS === minS) maxS = minS + 20;
+        return {minS,maxS,step:null};
+      }else{
+        const base = 50000; // 5万刻み
+        minS = Math.floor(minS/base)*base;
+        maxS = Math.ceil (maxS/base)*base;
+
+        let step = Math.ceil(((maxS - minS) / 4) / base) * base;
+        if(step < base) step = base;
+
+        maxS = minS + step*4;
+        return {minS,maxS,step};
+      }
+    }
+
+    function makeTicksFromScale(scale){
+      const {minS,maxS,step} = scale;
+      const arr=[];
+      if(step){
+        for(let i=0;i<5;i++) arr.push(minS + step*i);
+        return arr;
+      }
+      const d=(maxS-minS)/4;
+      for(let i=0;i<5;i++) arr.push(minS + d*i);
+      arr[0]=minS; arr[arr.length-1]=maxS;
       return arr;
     }
-    const d=(maxS-minS)/4;
-    for(let i=0;i<5;i++) arr.push(minS + d*i);
-    arr[0]=minS; arr[arr.length-1]=maxS;
-    return arr;
-  }
 
-  function labelFor(v,isOrders){
-    return isOrders ? `${Math.round(v)}` : `${Math.round(v/10000)}万`;
-  }
-
-  function renderYAxis(elems, {ticks,yToPx,H,isOrders}){
-    elems.yAxis.innerHTML = `
-      <svg width="42" height="${H}">
-        ${ticks.map(v=>{
-          const y=yToPx(v);
-          return `<text x="34" y="${y+4}" text-anchor="end"
-            font-size="11" fill="rgba(34,34,34,.55)" font-weight="900">
-            ${labelFor(v,isOrders)}
-          </text>`;
-        }).join("")}
-      </svg>
-    `;
-  }
-
-  /* ===== tooltip ===== */
-  function removeTooltip(svg){
-    const old = svg.querySelector(".chartTooltip");
-    if(old) old.remove();
-  }
-  function showTooltip(svg, x, y, text){
-    removeTooltip(svg);
-
-    const ns = "http://www.w3.org/2000/svg";
-    const g = document.createElementNS(ns, "g");
-    g.setAttribute("class","chartTooltip");
-
-    const t = document.createElementNS(ns, "text");
-    t.textContent = text;
-    t.setAttribute("text-anchor","middle");
-    t.setAttribute("x", x);
-    t.setAttribute("y", y - 14);
-
-    g.appendChild(t);
-    svg.appendChild(g);
-
-    const bbox = t.getBBox();
-    const padX = 10, padY = 6;
-
-    const r = document.createElementNS(ns, "rect");
-    r.setAttribute("x", bbox.x - padX);
-    r.setAttribute("y", bbox.y - padY);
-    r.setAttribute("width", bbox.width + padX*2);
-    r.setAttribute("height", bbox.height + padY*2);
-
-    g.insertBefore(r, t);
-  }
-
-  /* ===== 描画：scale指定で描く（※ここが“ぬるぬる”の肝） ===== */
-  function renderWithScale(elems, mode, scale){
-    const isOrders = (mode === "orders");
-    const series = isOrders ? orders : assets;
-
-    const N=series.length;
-    const xStep=96;
-    const H=220;
-    const padT=14, padB=42, padR=16;
-    const innerH=H-padT-padB;
-    const W=16 + xStep*(N-1) + padR;
-
-    elems.mount.style.width = `${42 + W}px`;
-
-    const ticks = scale.ticks;
-    const {minS,maxS} = scale;
-
-    const latest=series[N-1];
-    elems.metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
-
-    const denom = (maxS - minS) || 1;
-    const yToPx = v => padT + (1 - (v - minS) / denom) * innerH;
-
-    renderYAxis(elems, {ticks,yToPx,H,isOrders});
-
-    const pts = series.map((v,i)=>({x:42+i*xStep, y:yToPx(v), v}));
-    const path = pts.map((p,i)=> i ? `L ${p.x},${p.y}` : `M ${p.x},${p.y}`).join(" ");
-
-    elems.mount.innerHTML = `
-      <svg width="${42+W}" height="${H}" viewBox="0 0 ${42+W} ${H}">
-        ${ticks.map(v=>{
-          const y=yToPx(v);
-          return `<line x1="42" y1="${y}" x2="${42+W-padR}" y2="${y}" stroke="rgba(0,0,0,.10)"/>`;
-        }).join("")}
-
-        <path d="${path} L ${pts.at(-1).x},${padT+innerH} L ${pts[0].x},${padT+innerH} Z"
-              fill="rgba(225,138,106,.18)"/>
-
-        <path d="${path}" fill="none" stroke="rgba(225,138,106,.95)"
-              stroke-width="3" stroke-linecap="round"/>
-
-        ${pts.map(p=>`
-          <circle cx="${p.x}" cy="${p.y}" r="6"
-            fill="rgba(255,255,255,.95)" stroke="rgba(34,34,34,.28)" stroke-width="2"/>
-        `).join("")}
-
-        ${months.map((m,i)=>`
-          <text x="${42+i*xStep}" y="${H-18}" text-anchor="middle"
-            font-size="12" fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
-        `).join("")}
-      </svg>
-    `;
-
-    elems._pts = pts.map(p=>({
-      x:p.x, y:p.y,
-      label: isOrders ? `${p.v}件` : formatJPY(p.v)
-    }));
-  }
-
-  /* ===== 現在のスクロール位置から “目標スケール” を作る ===== */
-  function calcTargetScale(elems, mode){
-    const isOrders = (mode === "orders");
-    const series = isOrders ? orders : assets;
-    const N = series.length;
-    const xStep = 96;
-
-    const [i0,i1] = getVisibleRange(elems.scroller, {padL:42, xStep, N});
-    const s = computeScale(series, i0, i1, isOrders);
-    const ticks = makeTicksFromScale(s);
-
-    return { ...s, ticks, isOrders };
-  }
-
-  /* ===== スケールを“ぬるぬる”で寄せる ===== */
-  function lerp(a,b,t){ return a + (b-a)*t; }
-  function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
-
-  function animateScale(elems, mode, toScale){
-    const fromScale = elems.scale || toScale;
-
-    // 同値ならアニメ不要
-    const same = (Math.abs(fromScale.minS - toScale.minS) < 1e-6) && (Math.abs(fromScale.maxS - toScale.maxS) < 1e-6);
-    if(same){
-      elems.scale = toScale;
-      renderWithScale(elems, mode, toScale);
-      return;
+    function labelFor(v,isOrders){
+      return isOrders ? `${Math.round(v)}` : `${Math.round(v/10000)}万`;
     }
 
-    // 既存アニメ停止
-    if(elems.anim && elems.anim.raf) cancelAnimationFrame(elems.anim.raf);
+    function renderYAxis(elems, {ticks,yToPx,H,isOrders}){
+      elems.yAxis.innerHTML = `
+        <svg width="42" height="${H}">
+          ${ticks.map(v=>{
+            const y=yToPx(v);
+            return `<text x="34" y="${y+4}" text-anchor="end"
+              font-size="11" fill="rgba(34,34,34,.55)" font-weight="900">
+              ${labelFor(v,isOrders)}
+            </text>`;
+          }).join("")}
+        </svg>
+      `;
+    }
 
-    const anim = {
-      from: fromScale,
-      to: toScale,
-      start: performance.now(),
-      dur: 260, // ★ここが“ぬるぬる具合”（大きいほどゆっくり）
-      raf: 0
-    };
-    elems.anim = anim;
+    /* ===== tooltip ===== */
+    function removeTooltip(svg){
+      const old = svg.querySelector(".chartTooltip");
+      if(old) old.remove();
+    }
+    function showTooltip(svg, x, y, text){
+      removeTooltip(svg);
 
-    const step = (now)=>{
-      const t = clamp((now - anim.start) / anim.dur, 0, 1);
-      const k = easeOutCubic(t);
+      const ns = "http://www.w3.org/2000/svg";
+      const g = document.createElementNS(ns, "g");
+      g.setAttribute("class","chartTooltip");
 
-      // min/max と ticks を補間（ticksも補間するから“カクッ”が消える）
-      const cur = {
-        minS: lerp(anim.from.minS, anim.to.minS, k),
-        maxS: lerp(anim.from.maxS, anim.to.maxS, k),
-        step: anim.to.step,
-        isOrders: anim.to.isOrders,
-        ticks: anim.to.ticks.map((tv, i)=>{
-          const fv = anim.from.ticks[i] ?? anim.from.ticks.at(-1);
-          return lerp(fv, tv, k);
-        })
-      };
+      const t = document.createElementNS(ns, "text");
+      t.textContent = text;
+      t.setAttribute("text-anchor","middle");
+      t.setAttribute("x", x);
+      t.setAttribute("y", y - 14);
 
-      elems.scale = cur;
-      renderWithScale(elems, mode, cur);
+      g.appendChild(t);
+      svg.appendChild(g);
 
-      if(t < 1){
-        anim.raf = requestAnimationFrame(step);
-      }else{
-        elems.scale = anim.to;
-        renderWithScale(elems, mode, anim.to);
-      }
-    };
+      const bbox = t.getBBox();
+      const padX = 10, padY = 6;
 
-    anim.raf = requestAnimationFrame(step);
-  }
+      const r = document.createElementNS(ns, "rect");
+      r.setAttribute("x", bbox.x - padX);
+      r.setAttribute("y", bbox.y - padY);
+      r.setAttribute("width", bbox.width + padX*2);
+      r.setAttribute("height", bbox.height + padY*2);
 
-  /* ===== 初期描画（右端＝最新） ===== */
-  function initChart(elems, mode){
-    const target = calcTargetScale(elems, mode);
-    elems.scale = target;
-    renderWithScale(elems, mode, target);
+      g.insertBefore(r, t);
+    }
 
-    // 初回だけ右端へ
-    elems.scroller.scrollLeft = elems.scroller.scrollWidth - elems.scroller.clientWidth;
+    /* ===== 描画：scale指定で描く ===== */
+    function renderWithScale(elems, mode, scale){
+      const isOrders = (mode === "orders");
+      const series = isOrders ? ordersSeries : assetsSeries;
 
-    // 右端へ寄せた後に、もう一回 target を取り直して描画（表示範囲が変わるので）
-    const target2 = calcTargetScale(elems, mode);
-    elems.scale = target2;
-    renderWithScale(elems, mode, target2);
-  }
+      const N=series.length;
+      const xStep=96;
+      const H=220;
+      const padT=14, padB=42, padR=16;
+      const innerH=H-padT-padB;
+      const W=16 + xStep*(N-1) + padR;
 
-  /* ===== スクロール中：リアルタイムに目標へ寄せる ===== */
-  function attachSmoothScaleOnScroll(elems, mode){
-    let raf = 0;
-    elems.scroller.addEventListener("scroll", ()=>{
-      if(raf) return;
-      raf = requestAnimationFrame(()=>{
-        raf = 0;
-        const target = calcTargetScale(elems, mode);
-        animateScale(elems, mode, target);
-      });
-    }, {passive:true});
-  }
+      elems.mount.style.width = `${42 + W}px`;
 
-  /* ===== タップで近い点→tooltip（スクロール邪魔しない） ===== */
-  function attachTapToShowTooltip(elems){
-    let downX=0, downY=0, moved=false;
+      const ticks = scale.ticks;
+      const {minS,maxS} = scale;
 
-    const onDown = (e)=>{
-      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
-      downX=p.clientX; downY=p.clientY;
-      moved=false;
-    };
-    const onMove = (e)=>{
-      const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
-      if(Math.abs(p.clientX-downX)>6 || Math.abs(p.clientY-downY)>6) moved=true;
-    };
-    const onUp = (e)=>{
-      if(moved) return;
+      const latest=series[N-1];
+      elems.metricValue.textContent = isOrders ? `${latest}件` : formatJPY(latest);
 
-      const svg = elems.mount.querySelector("svg");
-      if(!svg) return;
+      const denom = (maxS - minS) || 1;
+      const yToPx = v => padT + (1 - (v - minS) / denom) * innerH;
 
-      const rect = svg.getBoundingClientRect();
-      const p = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : e;
-      const x = p.clientX - rect.left;
-      const y = p.clientY - rect.top;
+      renderYAxis(elems, {ticks,yToPx,H,isOrders});
 
-      if(x<0 || y<0 || x>rect.width || y>rect.height){
-        removeTooltip(svg);
+      const pts = series.map((v,i)=>({x:42+i*xStep, y:yToPx(v), v}));
+      const path = pts.map((p,i)=> i ? `L ${p.x},${p.y}` : `M ${p.x},${p.y}`).join(" ");
+
+      elems.mount.innerHTML = `
+        <svg width="${42+W}" height="${H}" viewBox="0 0 ${42+W} ${H}">
+          ${ticks.map(v=>{
+            const y=yToPx(v);
+            return `<line x1="42" y1="${y}" x2="${42+W-padR}" y2="${y}" stroke="rgba(0,0,0,.10)"/>`;
+          }).join("")}
+
+          <path d="${path} L ${pts.at(-1).x},${padT+innerH} L ${pts[0].x},${padT+innerH} Z"
+                fill="rgba(225,138,106,.18)"/>
+
+          <path d="${path}" fill="none" stroke="rgba(225,138,106,.95)"
+                stroke-width="3" stroke-linecap="round"/>
+
+          ${pts.map(p=>`
+            <circle cx="${p.x}" cy="${p.y}" r="6"
+              fill="rgba(255,255,255,.95)" stroke="rgba(34,34,34,.28)" stroke-width="2"/>
+          `).join("")}
+
+          ${months.map((m,i)=>`
+            <text x="${42+i*xStep}" y="${H-18}" text-anchor="middle"
+              font-size="12" fill="rgba(34,34,34,.65)" font-weight="900">${m}</text>
+          `).join("")}
+        </svg>
+      `;
+
+      elems._pts = pts.map(p=>({
+        x:p.x, y:p.y,
+        label: isOrders ? `${p.v}件` : formatJPY(p.v)
+      }));
+    }
+
+    function calcTargetScale(elems, mode){
+      const isOrders = (mode === "orders");
+      const series = isOrders ? ordersSeries : assetsSeries;
+      const N = series.length;
+      const xStep = 96;
+
+      const [i0,i1] = getVisibleRange(elems.scroller, {padL:42, xStep, N});
+      const s = computeScale(series, i0, i1, isOrders);
+      const ticks = makeTicksFromScale(s);
+
+      return { ...s, ticks, isOrders };
+    }
+
+    function lerp(a,b,t){ return a + (b-a)*t; }
+    function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
+
+    function animateScale(elems, mode, toScale){
+      const fromScale = elems.scale || toScale;
+
+      const same = (Math.abs(fromScale.minS - toScale.minS) < 1e-6) && (Math.abs(fromScale.maxS - toScale.maxS) < 1e-6);
+      if(same){
+        elems.scale = toScale;
+        renderWithScale(elems, mode, toScale);
         return;
       }
 
-      const vb = svg.viewBox.baseVal;
-      const sx = vb.width / rect.width;
-      const sy = vb.height / rect.height;
-      const vx = x * sx;
-      const vy = y * sy;
+      if(elems.anim && elems.anim.raf) cancelAnimationFrame(elems.anim.raf);
 
-      const pts = elems._pts || [];
-      let best=null, bestD=1e9;
-      for(const pt of pts){
-        const dx=pt.x-vx, dy=pt.y-vy;
-        const d2=dx*dx+dy*dy;
-        if(d2<bestD){bestD=d2; best=pt;}
-      }
+      const anim = {
+        from: fromScale,
+        to: toScale,
+        start: performance.now(),
+        dur: 260,
+        raf: 0
+      };
+      elems.anim = anim;
 
-      const threshold = 14*14;
-      if(best && bestD<=threshold){
-        showTooltip(svg, best.x, best.y, best.label);
-      }else{
-        removeTooltip(svg);
-      }
+      const step = (now)=>{
+        const t = clamp((now - anim.start) / anim.dur, 0, 1);
+        const k = easeOutCubic(t);
+
+        const cur = {
+          minS: lerp(anim.from.minS, anim.to.minS, k),
+          maxS: lerp(anim.from.maxS, anim.to.maxS, k),
+          step: anim.to.step,
+          isOrders: anim.to.isOrders,
+          ticks: anim.to.ticks.map((tv, i)=>{
+            const fv = anim.from.ticks[i] ?? anim.from.ticks.at(-1);
+            return lerp(fv, tv, k);
+          })
+        };
+
+        elems.scale = cur;
+        renderWithScale(elems, mode, cur);
+
+        if(t < 1){
+          anim.raf = requestAnimationFrame(step);
+        }else{
+          elems.scale = anim.to;
+          renderWithScale(elems, mode, anim.to);
+        }
+      };
+
+      anim.raf = requestAnimationFrame(step);
+    }
+
+    function initChart(elems, mode){
+      const target = calcTargetScale(elems, mode);
+      elems.scale = target;
+      renderWithScale(elems, mode, target);
+
+      elems.scroller.scrollLeft = elems.scroller.scrollWidth - elems.scroller.clientWidth;
+
+      const target2 = calcTargetScale(elems, mode);
+      elems.scale = target2;
+      renderWithScale(elems, mode, target2);
+    }
+
+    function attachSmoothScaleOnScroll(elems, mode){
+      let raf = 0;
+      elems.scroller.addEventListener("scroll", ()=>{
+        if(raf) return;
+        raf = requestAnimationFrame(()=>{
+          raf = 0;
+          const target = calcTargetScale(elems, mode);
+          animateScale(elems, mode, target);
+        });
+      }, {passive:true});
+    }
+
+    function attachTapToShowTooltip(elems){
+      let downX=0, downY=0, moved=false;
+
+      const onDown = (e)=>{
+        const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+        downX=p.clientX; downY=p.clientY;
+        moved=false;
+      };
+      const onMove = (e)=>{
+        const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+        if(Math.abs(p.clientX-downX)>6 || Math.abs(p.clientY-downY)>6) moved=true;
+      };
+      const onUp = (e)=>{
+        if(moved) return;
+
+        const svg = elems.mount.querySelector("svg");
+        if(!svg) return;
+
+        const rect = svg.getBoundingClientRect();
+        const p = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : e;
+        const x = p.clientX - rect.left;
+        const y = p.clientY - rect.top;
+
+        if(x<0 || y<0 || x>rect.width || y>rect.height){
+          removeTooltip(svg);
+          return;
+        }
+
+        const vb = svg.viewBox.baseVal;
+        const sx = vb.width / rect.width;
+        const sy = vb.height / rect.height;
+        const vx = x * sx;
+        const vy = y * sy;
+
+        const pts = elems._pts || [];
+        let best=null, bestD=1e9;
+        for(const pt of pts){
+          const dx=pt.x-vx, dy=pt.y-vy;
+          const d2=dx*dx+dy*dy;
+          if(d2<bestD){bestD=d2; best=pt;}
+        }
+
+        const threshold = 14*14;
+        if(best && bestD<=threshold){
+          showTooltip(svg, best.x, best.y, best.label);
+        }else{
+          removeTooltip(svg);
+        }
+      };
+
+      elems.scroller.addEventListener("pointerdown", onDown, {passive:true});
+      elems.scroller.addEventListener("pointermove", onMove, {passive:true});
+      elems.scroller.addEventListener("pointerup",   onUp,   {passive:true});
+
+      elems.scroller.addEventListener("touchstart", onDown, {passive:true});
+      elems.scroller.addEventListener("touchmove",  onMove, {passive:true});
+      elems.scroller.addEventListener("touchend",   onUp,   {passive:true});
+    }
+
+    /* ===== 起動（グラフ） ===== */
+    initChart(A, "orders");
+    initChart(B, "assets");
+    attachSmoothScaleOnScroll(A, "orders");
+    attachSmoothScaleOnScroll(B, "assets");
+    attachTapToShowTooltip(A);
+    attachTapToShowTooltip(B);
+
+    /* ===== flip ===== */
+    const ANIM_MS = 650;
+    function flip(){
+      isFlipped = !isFlipped;
+      cardChart.classList.add("is-animating");
+      cardChart.classList.toggle("is-flipped", isFlipped);
+      setTimeout(()=> cardChart.classList.remove("is-animating"), ANIM_MS);
+    }
+    cardChart.addEventListener("click", (e)=>{
+      if(e.target.closest(".chartScroller")) return;
+      flip();
+    });
+    if(flipHintA) flipHintA.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
+    if(flipHintB) flipHintB.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
+
+    /* ===== section2: Calendar ===== */
+    const HOLIDAY_API = "https://holidays-jp.github.io/api/v1/date.json";
+    const LS_EVENTS = "enue_events_v1";
+    const LS_POPUPS = "enue_popups_v1";
+
+    const defaultPopups = ["2025-12-10","2025-12-11"];
+    const defaultEvents = {
+      "2025-12-08": { color:"blue",   title:"現地MT", memo:"14:00〜" },
+      "2025-12-15": { color:"orange", title:"発送締め", memo:"" }
     };
 
-    elems.scroller.addEventListener("pointerdown", onDown, {passive:true});
-    elems.scroller.addEventListener("pointermove", onMove, {passive:true});
-    elems.scroller.addEventListener("pointerup",   onUp,   {passive:true});
-
-    elems.scroller.addEventListener("touchstart", onDown, {passive:true});
-    elems.scroller.addEventListener("touchmove",  onMove, {passive:true});
-    elems.scroller.addEventListener("touchend",   onUp,   {passive:true});
-  }
-
-  /* ===== 起動 ===== */
-  initChart(A, "orders");
-  initChart(B, "assets");
-
-  attachSmoothScaleOnScroll(A, "orders");
-  attachSmoothScaleOnScroll(B, "assets");
-
-  attachTapToShowTooltip(A);
-  attachTapToShowTooltip(B);
-
-  /* ===== flip（グラフ操作領域以外＝どこでも切替） ===== */
-  const ANIM_MS = 650; // 切替の“ゆっくり”
-  function flip(){
-    isFlipped = !isFlipped;
-    cardChart.classList.add("is-animating");
-    cardChart.classList.toggle("is-flipped", isFlipped);
-    setTimeout(()=> cardChart.classList.remove("is-animating"), ANIM_MS);
-  }
-
-  cardChart.addEventListener("click", (e)=>{
-    // ★chartScroller 触ってる時は切替しない（スクロール最優先）
-    if(e.target.closest(".chartScroller")) return;
-    flip();
-  });
-
-  // （残しておく：万一 span が残ってたら）
-  if(flipHintA) flipHintA.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
-  if(flipHintB) flipHintB.addEventListener("click", (e)=>{ e.stopPropagation(); flip(); });
-
-  /* ===== 以下：カレンダー＆テーブル（元のまま） ===== */
-  const calMonthLabel = document.getElementById("calMonthLabel");
-  const calTitle = document.getElementById("calTitle");
-  const calGrid = document.getElementById("calGrid");
-
-  const calYear = 2025, calMonth = 12;
-  calMonthLabel.textContent = `${calMonth}月`;
-  calTitle.textContent = `${calYear}.${String(calMonth).padStart(2,"0")}`;
-
-  const dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  calGrid.innerHTML = dows.map(d=>`<div class="dow">${d}</div>`).join("");
-
-  const first = new Date(calYear, calMonth-1, 1);
-  const firstDow = first.getDay();
-  const lastDay = new Date(calYear, calMonth, 0).getDate();
-
-  const events = {
-    10: [{t:"POP UP", style:"accent"}],
-    11: [{t:"POP UP", style:"accent"}],
-    12: [{t:"レインボー倉庫", style:"soft"}],
-    20: [{t:"story販売", style:"accent"}],
-    27: [{t:"定休日", style:"soft"}],
-    31: [{t:"定休日", style:"soft"}],
-  };
-
-  const totalCells = 42;
-  for(let i=0;i<totalCells;i++){
-    const dayNum = i - firstDow + 1;
-    if(dayNum < 1 || dayNum > lastDay){
-      calGrid.insertAdjacentHTML("beforeend", `<div class="day" style="opacity:.35;"></div>`);
-    }else{
-      const ev = events[dayNum] || [];
-      const pills = ev.map(e=>`<span class="pill ${e.style}">${e.t}</span>`).join("");
-      calGrid.insertAdjacentHTML("beforeend", `
-        <div class="day">
-          <div class="num">${dayNum}</div>
-          ${pills}
-        </div>
-      `);
+    function loadJson(key, fallback){
+      try{
+        const s = localStorage.getItem(key);
+        if(!s) return fallback;
+        return JSON.parse(s);
+      }catch(e){
+        return fallback;
+      }
     }
+    function saveJson(key, value){
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    let POPUP_DATES = new Set(loadJson(LS_POPUPS, defaultPopups));
+    let EVENTS = loadJson(LS_EVENTS, defaultEvents);
+
+    const calBox = document.getElementById("calBox");
+    const calViewport = document.getElementById("calViewport");
+    const monthLabel = document.getElementById("monthLabel");
+    const monthLabelMini = document.getElementById("monthLabelMini");
+
+    const todayBtn = document.getElementById("todayBtn");
+    const prevBtn  = document.getElementById("prevBtn");
+    const nextBtn  = document.getElementById("nextBtn");
+    const modeBtn  = document.getElementById("modeBtn");
+
+    const pad2 = n => String(n).padStart(2,"0");
+    const ymd = (dt) => `${dt.getFullYear()}-${pad2(dt.getMonth()+1)}-${pad2(dt.getDate())}`;
+
+    const now = new Date();
+    const baseMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    let view = new Date(baseMonth);
+
+    const MIN = new Date(baseMonth.getFullYear(), baseMonth.getMonth()-12, 1);
+    const MAX = new Date(baseMonth.getFullYear(), baseMonth.getMonth()+12, 1);
+
+    const storedMode = localStorage.getItem("enue_dow_mode");
+    let dowMode = storedMode === "mon" ? "mon" : "sun";
+
+    let holidayMap = null;
+
+    function updateCellSize(){
+      if(!calBox) return;
+      const rect = calBox.getBoundingClientRect();
+      const innerW = rect.width - 2;
+      const cell = Math.floor(innerW / 7);
+      const clamped = Math.max(44, Math.min(74, cell));
+      document.documentElement.style.setProperty("--cell", clamped + "px");
+    }
+    if(calBox && window.ResizeObserver){
+      new ResizeObserver(updateCellSize).observe(calBox);
+    }
+    updateCellSize();
+
+    async function loadHolidays(){
+      if(holidayMap) return holidayMap;
+      try{
+        const res = await fetch(HOLIDAY_API, { cache:"force-cache" });
+        holidayMap = await res.json();
+      }catch(e){
+        console.warn("holiday api fetch failed", e);
+        holidayMap = {};
+      }
+      return holidayMap;
+    }
+
+    function getDows(){
+      return (dowMode === "mon")
+        ? ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+        : ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    }
+    function dayToCol(day){
+      if(dowMode === "sun") return day;
+      return (day + 6) % 7;
+    }
+    function syncModeBtn(){
+      if(!modeBtn) return;
+      modeBtn.textContent = (dowMode === "sun") ? "Sun–Sat" : "Mon–Sun";
+    }
+
+    let popEl = null;
+    function closePopover(){ if(popEl){ popEl.remove(); popEl=null; } }
+
+    function openPopover(targetEl, html, onMount){
+      closePopover();
+      const r = targetEl.getBoundingClientRect();
+      popEl = document.createElement("div");
+      popEl.className = "popover"; /* ★CSSと一致 */
+      popEl.innerHTML = html;
+      document.body.appendChild(popEl);
+
+      const pr = popEl.getBoundingClientRect();
+      let x = r.left + 6;
+      let y = r.bottom + 8;
+      if(x + pr.width > window.innerWidth - 10) x = window.innerWidth - pr.width - 10;
+      if(y + pr.height > window.innerHeight - 10) y = r.top - pr.height - 8;
+      if(y < 10) y = 10;
+      popEl.style.left = x + "px";
+      popEl.style.top  = y + "px";
+
+      if(typeof onMount === "function") onMount(popEl);
+    }
+
+    function escapeHtml(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#39;");
+    }
+
+    function moveSchedule(oldKey, newKey){
+      if(!newKey || newKey === oldKey) return;
+
+      const hadPopup = POPUP_DATES.has(oldKey);
+      const hadEvent = !!EVENTS[oldKey];
+
+      if(hadPopup){
+        POPUP_DATES.delete(oldKey);
+        POPUP_DATES.add(newKey);
+      }
+      if(hadEvent){
+        const payload = EVENTS[oldKey];
+        delete EVENTS[oldKey];
+        EVENTS[newKey] = payload;
+      }
+
+      saveJson(LS_POPUPS, Array.from(POPUP_DATES));
+      saveJson(LS_EVENTS, EVENTS);
+
+      const [yy,mm] = newKey.split("-").map(Number);
+      view = new Date(yy, mm-1, 1);
+
+      renderMonth("none");
+    }
+
+    function buildGrid(year, month){
+      const grid = document.createElement("div");
+      grid.className = "calGrid";
+
+      const dows = getDows();
+      for(let i=0;i<7;i++){
+        const dow = document.createElement("div");
+        dow.className = "dow";
+        dow.textContent = dows[i];
+        grid.appendChild(dow);
+      }
+
+      const firstDow = new Date(year, month-1, 1).getDay();
+      const firstCol = dayToCol(firstDow);
+      const lastDate = new Date(year, month, 0).getDate();
+
+      const needed = firstCol + lastDate;
+      const weeks = Math.ceil(needed / 7);
+      const totalCells = weeks * 7;
+
+      const prevLast = new Date(year, month-1, 0).getDate();
+      const nextY = (month === 12) ? year+1 : year;
+      const nextM = (month === 12) ? 1 : month+1;
+      const prevY = (month === 1) ? year-1 : year;
+      const prevM = (month === 1) ? 12 : month-1;
+
+      const todayKey = ymd(new Date());
+
+      for(let idx=0; idx<totalCells; idx++){
+        let d, cellY=year, cellM=month, outside=false;
+
+        if(idx < firstCol){
+          outside = true;
+          cellY = prevY; cellM = prevM;
+          d = prevLast - (firstCol - 1 - idx);
+        }else if(idx >= firstCol + lastDate){
+          outside = true;
+          cellY = nextY; cellM = nextM;
+          d = (idx - (firstCol + lastDate)) + 1;
+        }else{
+          d = (idx - firstCol) + 1;
+        }
+
+        const key = `${cellY}-${pad2(cellM)}-${pad2(d)}`;
+        const isToday = key === todayKey;
+
+        const realDay = new Date(cellY, cellM-1, d).getDay();
+        const isSun = realDay === 0;
+        const isSat = realDay === 6;
+
+        const hName = holidayMap?.[key] || "";
+        const isHoliday = !!hName;
+
+        const isPopup = POPUP_DATES.has(key);
+        const ev = EVENTS[key] || null;
+        const hasEvent = !!ev;
+
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "day"
+          + (outside ? " dim" : "")
+          + (isSun ? " sun" : "")
+          + (isSat ? " sat" : "")
+          + (isHoliday ? " holiday" : "")
+          + (isToday ? " today" : "");
+
+        let centerHtml = `<div class="centerMark"></div>`;
+        if(isPopup){
+          centerHtml = `<div class="centerMark"><span class="stamp" aria-label="POPUP"><span>POP</span><span>UP</span></span></div>`;
+        }else if(hasEvent){
+          const c = ev.color || "orange";
+          centerHtml = `<div class="centerMark"><span class="eventDot ${c}" aria-label="event"></span></div>`;
+        }
+
+        cell.innerHTML = `
+          <div class="num">${d}</div>
+          ${centerHtml}
+        `;
+
+        cell.addEventListener("click", ()=>{
+          const editable = (isPopup || hasEvent);
+
+          const pills = [];
+          if(isPopup) pills.push(`<span class="badge">POP UP</span>`);
+          if(hasEvent) pills.push(`<span class="badge">予定：${escapeHtml(ev.title || "予定")}</span>`);
+          if(isHoliday) pills.push(`<span class="badge red">祝日：${escapeHtml(hName)}</span>`);
+          if(isSun && !isHoliday) pills.push(`<span class="badge red">日曜</span>`);
+          if(isSat) pills.push(`<span class="badge blue">土曜</span>`);
+          if(!editable && !isHoliday) pills.push(`<span class="badge">予定なし</span>`);
+
+          const memoLine = hasEvent && ev.memo
+            ? `<div class="popSub" style="margin-top:6px;">${escapeHtml(ev.memo)}</div>`
+            : "";
+
+          const headRight = editable
+            ? `<button class="iconBtn" type="button" id="editBtn" title="日付を変更">✏️</button>`
+            : ``;
+
+          const html = `
+            <div class="popHead">
+              <div>
+                <div class="popTitle">${key}</div>
+                <div class="popSub">${cellY}.${pad2(cellM)}${outside ? "（前後月）" : ""}</div>
+                ${memoLine}
+              </div>
+              ${headRight}
+            </div>
+
+            <div class="popRow">${pills.join("")}</div>
+
+            ${editable ? `
+              <div class="editBox" id="editBox">
+                <label>日付を変更</label>
+                <div class="editRow">
+                  <input class="dateInput" id="dateInput" type="date" value="${key}">
+                  <button class="saveBtn" type="button" id="saveBtn">保存</button>
+                </div>
+                <div class="note">※この操作は（POPUP / 予定）を新しい日付へ移動します</div>
+              </div>
+            ` : ""}
+
+            <div class="closeHint">外側タップで閉じる</div>
+          `;
+
+          openPopover(cell, html, (pop)=>{
+            if(!editable) return;
+
+            const editBtn = pop.querySelector("#editBtn");
+            const editBox = pop.querySelector("#editBox");
+            const dateInput = pop.querySelector("#dateInput");
+            const saveBtn = pop.querySelector("#saveBtn");
+
+            editBtn.addEventListener("click", (e)=>{
+              e.stopPropagation();
+              editBox.classList.toggle("show");
+              if(editBox.classList.contains("show")){
+                setTimeout(()=> dateInput.focus(), 0);
+              }
+            });
+
+            saveBtn.addEventListener("click", (e)=>{
+              e.stopPropagation();
+              const newKey = dateInput.value;
+              moveSchedule(key, newKey);
+              closePopover();
+            });
+
+            dateInput.addEventListener("keydown", (e)=>{
+              if(e.key === "Enter"){
+                e.preventDefault();
+                const newKey = dateInput.value;
+                moveSchedule(key, newKey);
+                closePopover();
+              }
+            });
+          });
+        }, { passive:true });
+
+        grid.appendChild(cell);
+      }
+
+      return grid;
+    }
+
+    function setNavDisabled(){
+      if(!prevBtn || !nextBtn) return;
+      prevBtn.disabled = view <= MIN;
+      nextBtn.disabled = view >= MAX;
+    }
+
+    function setHeader(){
+      const y = view.getFullYear();
+      const m = view.getMonth()+1;
+      const label = `${y}.${pad2(m)}`;
+      if(monthLabel) monthLabel.textContent = label;
+      if(monthLabelMini) monthLabelMini.textContent = label;
+      syncModeBtn();
+    }
+
+    function renderMonth(direction){
+      closePopover();
+      setNavDisabled();
+      setHeader();
+
+      const y = view.getFullYear();
+      const m = view.getMonth()+1;
+
+      const incoming = buildGrid(y, m);
+
+      if(direction === "none" || !calViewport){
+        if(calViewport){
+          calViewport.innerHTML = "";
+          calViewport.appendChild(incoming);
+        }
+        incoming.classList.add("slideActive");
+        return;
+      }
+
+      const current = calViewport.querySelector(".calGrid");
+      calViewport.appendChild(incoming);
+
+      if(direction === "left"){
+        incoming.classList.add("slideEnterRight");
+        requestAnimationFrame(()=>{
+          incoming.classList.add("slideActive");
+          incoming.classList.remove("slideEnterRight");
+          if(current){
+            current.classList.add("slideExitLeft");
+            setTimeout(()=> current.remove(), 300);
+          }
+        });
+      }else{
+        incoming.classList.add("slideEnterLeft");
+        requestAnimationFrame(()=>{
+          incoming.classList.add("slideActive");
+          incoming.classList.remove("slideEnterLeft");
+          if(current){
+            current.classList.add("slideExitRight");
+            setTimeout(()=> current.remove(), 300);
+          }
+        });
+      }
+    }
+
+    if(prevBtn) prevBtn.addEventListener("click", ()=>{
+      if(view <= MIN) return;
+      view = new Date(view.getFullYear(), view.getMonth()-1, 1);
+      renderMonth("right");
+    });
+    if(nextBtn) nextBtn.addEventListener("click", ()=>{
+      if(view >= MAX) return;
+      view = new Date(view.getFullYear(), view.getMonth()+1, 1);
+      renderMonth("left");
+    });
+    if(todayBtn) todayBtn.addEventListener("click", ()=>{
+      view = new Date(baseMonth.getFullYear(), baseMonth.getMonth(), 1);
+      renderMonth("none");
+    });
+    if(modeBtn) modeBtn.addEventListener("click", ()=>{
+      dowMode = (dowMode === "sun") ? "mon" : "sun";
+      localStorage.setItem("enue_dow_mode", dowMode);
+      renderMonth("none");
+    });
+
+    document.addEventListener("click", (e)=>{
+      if(!popEl) return;
+      const t = e.target;
+      if(popEl.contains(t)) return;
+      if(t.closest && t.closest(".day")) return;
+      closePopover();
+    }, { passive:true });
+    window.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closePopover(); });
+
+    (async function initCalendar(){
+      await loadHolidays();
+      renderMonth("none");
+    })();
+
+    /* ===== section3/4: Orders ===== */
+    const ORDERS_LS_KEY = "enue_orders_v1";       // 決済ページが作る購入履歴
+    const ROWS_LS_KEY   = "enue_stock_meta_v1";  // 期日/進捗/担当の上書き保存
+
+    const STATUS = ["未着手","入金待ち","進行中","完了"];
+    const ASSIGNEE_OPTIONS = ["藤原","川原"];
+
+    const tbodyStock = document.getElementById("tbodyStock");
+    const emptyStock = document.getElementById("emptyStock");
+    const tbodyOrder = document.getElementById("tbodyOrder");
+    const emptyOrder = document.getElementById("emptyOrder");
+
+    const overlay = document.getElementById("overlayOrders");
+    const sheetTitle = document.getElementById("sheetTitle");
+    const sheetBody  = document.getElementById("sheetBody");
+    const sheetFoot  = document.getElementById("sheetFoot");
+    const closeBtn   = document.getElementById("closeBtn");
+    const cancelBtn  = document.getElementById("cancelBtn");
+    const saveBtn    = document.getElementById("saveBtn");
+    const datePicker = document.getElementById("datePicker");
+
+    let ordersData = loadOrders();
+    let meta   = loadMeta();
+    let rows   = buildRows(ordersData, meta);
+
+    function rerenderAll(){
+      ordersData = loadOrders();
+      meta   = loadMeta();
+      rows   = buildRows(ordersData, meta);
+      renderTable("stock");
+      renderTable("order");
+    }
+
+    function renderTable(kind){
+      const tbody = (kind==="stock") ? tbodyStock : tbodyOrder;
+      const emptyEl = (kind==="stock") ? emptyStock : emptyOrder;
+      if(!tbody || !emptyEl) return;
+
+      tbody.innerHTML = "";
+
+      const visible = rows
+        .filter(r => r.method !== "マルシェ")
+        .filter(r => r.status !== "完了");
+
+      emptyEl.style.display = (visible.length===0) ? "block" : "none";
+
+      visible.forEach(r=>{
+        const tr = document.createElement("tr");
+        tr.appendChild(td("名前", nameCell(r)));
+        tr.appendChild(td("期日", dueCell(r)));
+        tr.appendChild(td("進捗", statusCell(r)));
+        tr.appendChild(td("担当", assigneeCell(r)));
+        tbody.appendChild(tr);
+      });
+    }
+
+    function td(label, child){
+      const cell = document.createElement("td");
+      cell.setAttribute("data-label", label);
+      cell.appendChild(child);
+      return cell;
+    }
+
+    function nameCell(r){
+      const btn = document.createElement("button");
+      btn.className = "nameBtn";
+      btn.type = "button";
+      btn.innerHTML = `<span>${escapeHtml(r.name)}</span><span class="chev">›</span>`;
+      btn.onclick = ()=> openReceiptById(r.receiptId);
+      return btn;
+    }
+
+    function dueCell(r){
+      const btn = document.createElement("div");
+      btn.className = "tap duePill";
+      btn.role = "button";
+      btn.tabIndex = 0;
+      btn.textContent = formatNoYear(r.due);
+      btn.onclick = ()=> editDue(r.receiptId);
+      btn.onkeydown = (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); editDue(r.receiptId); } };
+      return btn;
+    }
+
+    function statusCell(r){
+      const btn = document.createElement("div");
+      btn.className = "tap";
+      btn.role = "button";
+      btn.tabIndex = 0;
+
+      const pill = document.createElement("div");
+      pill.className = "statusPill " + statusClass(r.status);
+      pill.innerHTML = `<span class="dot"></span><span>${escapeHtml(r.status)}</span>`;
+      btn.appendChild(pill);
+
+      btn.onclick = ()=> editStatus(r.receiptId);
+      btn.onkeydown = (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); editStatus(r.receiptId); } };
+      return btn;
+    }
+
+    function assigneeCell(r){
+      const btn = document.createElement("div");
+      btn.className = "tap";
+      btn.role = "button";
+      btn.tabIndex = 0;
+
+      const wrap = document.createElement("div");
+      wrap.className = "chips";
+
+      if(!r.assignees || r.assignees.length===0){
+        const c = document.createElement("span");
+        c.className = "chip muted";
+        c.textContent = "未設定";
+        wrap.appendChild(c);
+      }else{
+        r.assignees.forEach(a=>{
+          const c = document.createElement("span");
+          c.className = "chip";
+          c.textContent = a;
+          wrap.appendChild(c);
+        });
+      }
+
+      btn.appendChild(wrap);
+      btn.onclick = ()=> editAssignees(r.receiptId);
+      btn.onkeydown = (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); editAssignees(r.receiptId); } };
+      return btn;
+    }
+
+    function openReceiptById(receiptId){
+      location.href = `receipt.html?id=${encodeURIComponent(receiptId)}`;
+    }
+
+    function editDue(receiptId){
+      const r = rows.find(x=>x.receiptId===receiptId);
+      if(!r || !datePicker) return;
+
+      datePicker.value = r.due || "";
+      datePicker.onchange = ()=>{
+        const next = datePicker.value || r.due;
+        upsertMeta(receiptId, { due: next });
+      };
+      datePicker.focus();
+      datePicker.click();
+    }
+
+    function editStatus(receiptId){
+      const r = rows.find(x=>x.receiptId===receiptId);
+      if(!r) return;
+
+      openSheet("進捗を選択", ()=>{
+        const body = document.createElement("div");
+        body.className = "enueOptList";
+
+        STATUS.forEach(s=>{
+          const opt = document.createElement("div");
+          opt.className = "enueOpt";
+          opt.innerHTML = `
+            <div class="left">
+              <span class="statusPill ${statusClass(s)}" style="margin:0;">
+                <span class="dot"></span><span>${escapeHtml(s)}</span>
+              </span>
+            </div>
+            <div class="right">${r.status===s ? "選択中" : ""}</div>
+          `;
+          opt.onclick = ()=> upsertMeta(receiptId, { status: s }, true);
+          body.appendChild(opt);
+        });
+
+        return body;
+      });
+    }
+
+    function editAssignees(receiptId){
+      const r = rows.find(x=>x.receiptId===receiptId);
+      if(!r) return;
+
+      const draft = new Set(r.assignees || []);
+
+      openSheet("担当を選択（複数可）", ()=>{
+        const body = document.createElement("div");
+        body.className = "enueOptList";
+
+        ASSIGNEE_OPTIONS.forEach(a=>{
+          const opt = document.createElement("div");
+          opt.className = "enueOpt";
+
+          const check = document.createElement("span");
+          check.className = "enueCheck" + (draft.has(a) ? " on" : "");
+          check.textContent = draft.has(a) ? "✓" : "";
+
+          const left = document.createElement("div");
+          left.className = "left";
+          left.innerHTML = `<span style="font-weight:900;">${escapeHtml(a)}</span>`;
+          left.prepend(check);
+
+          const right = document.createElement("div");
+          right.className = "right";
+          right.textContent = draft.has(a) ? "選択中" : "";
+
+          opt.appendChild(left);
+          opt.appendChild(right);
+
+          opt.onclick = ()=>{
+            if(draft.has(a)) draft.delete(a);
+            else draft.add(a);
+            check.className = "enueCheck" + (draft.has(a) ? " on" : "");
+            check.textContent = draft.has(a) ? "✓" : "";
+            right.textContent = draft.has(a) ? "選択中" : "";
+          };
+
+          body.appendChild(opt);
+        });
+
+        showSheetFooter(
+          ()=> closeSheet(),
+          ()=> upsertMeta(receiptId, { assignees: Array.from(draft) })
+        );
+
+        return body;
+      });
+    }
+
+    function upsertMeta(receiptId, patch, closeImmediately=false){
+      meta[receiptId] = { ...(meta[receiptId]||{}), ...patch };
+      saveMeta(meta);
+
+      if(closeImmediately) closeSheet();
+      rerenderAll();
+    }
+
+    function buildRows(orders, meta){
+      const mapped = (orders || [])
+        .map(mapOrderToRow)
+        .filter(Boolean)
+        .filter(r => r.method !== "マルシェ");
+
+      const merged = mapped.map(r=>{
+        const m = meta[r.receiptId];
+        if(!m) return r;
+        return {
+          ...r,
+          due: (m.due ?? r.due),
+          status: (m.status ?? r.status),
+          assignees: (m.assignees ?? r.assignees),
+        };
+      });
+
+      merged.sort((a,b)=> (b.createdAt ?? 0) - (a.createdAt ?? 0));
+      return merged;
+    }
+
+    function mapOrderToRow(o){
+      if(!o) return null;
+
+      const receiptId = o.id ?? o.receiptId ?? o.receipt_id ?? null;
+      if(!receiptId) return null;
+
+      const method = o.method ?? o.salesMethod ?? o.channel ?? o.saleType ?? "";
+
+      const name =
+        o.name ??
+        o.title ??
+        (Array.isArray(o.items) && o.items[0]?.name ? `${o.items[0].name}${o.items.length>1 ? ` 他${o.items.length-1}` : ""}` : "（名称なし）");
+
+      const due = normalizeDate(o.due ?? o.deadline ?? o.limit ?? "");
+      const status = (o.status && STATUS.includes(o.status)) ? o.status : "未着手";
+      const assignees = Array.isArray(o.assignees) ? o.assignees : [];
+
+      const createdAt = o.createdAt ?? o.created_at ?? o.ts ?? 0;
+
+      return { receiptId, method, name, due, status, assignees, createdAt };
+    }
+
+    if(overlay){
+      overlay.addEventListener("click", closeSheet);
+    }
+    if(closeBtn){
+      closeBtn.addEventListener("click", closeSheet);
+    }
+
+    function openSheet(title, bodyFactory){
+      if(!overlay || !sheetTitle || !sheetBody || !sheetFoot) return;
+
+      sheetTitle.textContent = title;
+      sheetBody.innerHTML = "";
+      sheetFoot.style.display = "none";
+      cancelBtn && (cancelBtn.onclick = null);
+      saveBtn && (saveBtn.onclick = null);
+
+      const body = bodyFactory();
+      sheetBody.appendChild(body);
+
+      overlay.classList.add("show");
+    }
+
+    function showSheetFooter(onCancel, onSave){
+      if(!sheetFoot) return;
+      sheetFoot.style.display = "flex";
+      if(cancelBtn) cancelBtn.onclick = onCancel;
+      if(saveBtn) saveBtn.onclick = onSave;
+    }
+
+    function closeSheet(){
+      if(!overlay || !sheetBody || !sheetFoot) return;
+      overlay.classList.remove("show");
+      sheetBody.innerHTML = "";
+      sheetFoot.style.display = "none";
+    }
+
+    function statusClass(status){
+      if(status==="未着手") return "s-michakushu";
+      if(status==="入金待ち") return "s-nyuukin";
+      if(status==="進行中") return "s-shinkochu";
+      if(status==="完了") return "s-done";
+      return "s-michakushu";
+    }
+
+    function formatNoYear(iso){
+      if(!iso) return "-";
+      const d = new Date(iso + "T00:00:00");
+      if(Number.isNaN(d.getTime())) return "-";
+      const m = String(d.getMonth()+1).padStart(2,"0");
+      const day = String(d.getDate()).padStart(2,"0");
+      return `${m}/${day}`;
+    }
+
+    function normalizeDate(v){
+      if(!v) return "";
+      const s = String(v).trim();
+      if(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(s)) return s;
+      if(/^[0-9]{4}\/[0-9]{2}\/[0-9]{2}$/.test(s)) return s.replaceAll("/","-");
+      return "";
+    }
+
+    function loadOrders(){
+      try{
+        const raw = localStorage.getItem(ORDERS_LS_KEY);
+        if(!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      }catch{
+        return [];
+      }
+    }
+
+    function loadMeta(){
+      try{
+        const raw = localStorage.getItem(ROWS_LS_KEY);
+        if(!raw) return {};
+        const parsed = JSON.parse(raw);
+        return (parsed && typeof parsed === "object") ? parsed : {};
+      }catch{
+        return {};
+      }
+    }
+
+    function saveMeta(meta){
+      localStorage.setItem(ROWS_LS_KEY, JSON.stringify(meta));
+    }
+
+    /* first render */
+    renderTable("stock");
+    renderTable("order");
+
+  }catch(err){
+    console.error("Dashboard init error:", err);
+    alert("JSエラーで描画が止まりました。Consoleを見てね: " + err);
   }
-
-  const stockBody = document.getElementById("stockBody");
-  const orderBody = document.getElementById("orderBody");
-
-  const stockRows = [
-    {name:"下駄箱標準PB", due:"2025/06/19", status:"進行中", st:"doing", assignees:["川原"]},
-    {name:"協議用図面作成", due:"2025/07/24", status:"進行中", st:"doing", assignees:["藤原","川原"]},
-    {name:"外壁サンプル全集め", due:"2025/07/31", status:"待ち", st:"wait", assignees:["藤原"]},
-    {name:"忘年会", due:"2025/12/20", status:"進行中", st:"doing", assignees:["川原"]},
-  ];
-
-  const orderRows = [
-    {name:"オーダー：バブーシュカA", due:"2025/06/28", status:"未着手", st:"todo", assignees:["藤原"]},
-    {name:"オーダー：ドレスB", due:"2025/07/05", status:"進行中", st:"doing", assignees:["川原"]},
-    {name:"オーダー：刺繍C", due:"2025/07/12", status:"完了", st:"done", assignees:["藤原","川原"]},
-  ];
-
-  function statusClass(st){
-    if(st==="doing") return "st-doing";
-    if(st==="wait")  return "st-wait";
-    if(st==="done")  return "st-done";
-    return "st-todo";
-  }
-
-  function renderRows(mount, rows){
-    mount.innerHTML = rows.map(r=>`
-      <tr class="row">
-        <td>${r.name}</td>
-        <td>${r.due}</td>
-        <td><span class="status ${statusClass(r.st)}"><span class="dot"></span>${r.status}</span></td>
-        <td style="text-align:right;">${r.assignees.join(" / ")}</td>
-      </tr>
-    `).join("");
-  }
-
-  renderRows(stockBody, stockRows);
-  renderRows(orderBody, orderRows);
 })();
 </script>
 
