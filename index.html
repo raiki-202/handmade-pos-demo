@@ -344,7 +344,6 @@
         </h1>
 
         <div class="nav">
-          <!-- otherpageへ戻る（必要ならパス変更して） -->
           <a class="nav-btn" href="index.html" aria-label="戻る">← 戻る</a>
           <span class="pill" id="statusPill">未接続</span>
         </div>
@@ -357,6 +356,7 @@
               <h3>POS</h3>
               <div class="sub">販売方法 / 決済方法 / 購入商品 → Firestoreへ送信</div>
             </div>
+            <span class="pill" id="masterPill">商品マスタ：読込中</span>
           </div>
 
           <div class="posBody">
@@ -384,7 +384,7 @@
 
             <div class="products" id="products"></div>
 
-            <button class="primary" id="checkoutBtn" type="button">決済へ進む</button>
+            <button class="primary" id="checkoutBtn" type="button" disabled>決済へ進む</button>
             <div class="total" id="totalText">合計：￥0</div>
           </div>
         </div>
@@ -419,7 +419,6 @@
 
   <div class="toast" id="toast">保存しました</div>
 
-<!-- Firebase (Firestore) -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
@@ -427,39 +426,42 @@
   /* ===========================
      ✅ ここだけ自分のFirebaseに差し替え
      =========================== */
- const firebaseConfig = {
-  apiKey: "AIzaSyCINAN5ciYMvKhnrm7thQ8mhK1rL8KQu_o",
-  authDomain: "handmade-pos-dev.firebaseapp.com",
-  projectId: "handmade-pos-dev",
-  storageBucket: "handmade-pos-dev.firebasestorage.app",
-  messagingSenderId: "772649201782",
-  appId: "1:772649201782:web:ea509be21b4b8c53a66f57",
-};
-
-
-  /* ===========================
-     POS Settings / Products
-     - 商品マスタは将来 bundle(json) 読み込みに置換OK
-     =========================== */
-
-  const defaultProducts = [
-    { id:"p1", name:"バブーシュカ", price:1500 },
-    { id:"p2", name:"ヘアクリップ", price:800 },
-    { id:"p3", name:"ピアス", price:1200 },
-  ];
-
-  const LS_SETTINGS_KEY = "pos_settings_v2";
-
-  const defaultSettings = {
-    channels: ["マルシェ", "インスタグラム", "onlinestore"],  // ←追加済み
-    venues: ["cafe1400"],
-    currentChannel: "マルシェ",
-    currentVenue: "cafe1400",
-    paymentMethod: "現金",
+  const firebaseConfig = {
+    apiKey: "AIzaSyCINAN5ciYMvKhnrm7thQ8mhK1rL8KQu_o",
+    authDomain: "handmade-pos-dev.firebaseapp.com",
+    projectId: "handmade-pos-dev",
+    storageBucket: "handmade-pos-dev.firebasestorage.app",
+    messagingSenderId: "772649201782",
+    appId: "1:772649201782:web:ea509be21b4b8c53a66f57"
   };
 
   /* ===========================
-     Init Firebase
+     商品マスタ（bundle）
+     - pos.html と同階層に products_bundle.json を置く
+     =========================== */
+  const BUNDLE_URL = "./products_bundle.json";
+  async function loadProductsFromBundle(){
+    const res = await fetch(BUNDLE_URL, { cache: "no-store" });
+    if(!res.ok) throw new Error("products_bundle.json が読み込めません");
+    const json = await res.json();
+    if(!json.products || !Array.isArray(json.products)) return [];
+    return json.products.filter(p => p.active !== false);
+  }
+
+  /* ===========================
+     Settings
+     =========================== */
+  const LS_SETTINGS_KEY = "pos_settings_v2";
+  const defaultSettings = {
+    channels: ["マルシェ", "インスタグラム", "onlinestore"],
+    venues: ["cafe1400"],
+    currentChannel: "マルシェ",
+    currentVenue: "cafe1400",
+    paymentMethod: "現金"
+  };
+
+  /* ===========================
+     Firebase init
      =========================== */
   let db = null;
   let firebaseOk = false;
@@ -467,6 +469,8 @@
   const $ = (id) => document.getElementById(id);
 
   const $statusPill = $("statusPill");
+  const $masterPill = $("masterPill");
+
   const $channelSelect = $("channelSelect");
   const $venueSelect = $("venueSelect");
   const $venueWrap = $("venueWrap");
@@ -487,14 +491,12 @@
   const $toast = $("toast");
 
   let settings = loadSettings();
-  let products = [...defaultProducts];
+  let products = [];
 
   function setStatus(ok, text){
     firebaseOk = ok;
     $statusPill.textContent = text;
-    $statusPill.style.background = ok ? "rgba(255,255,255,.85)" : "rgba(255,255,255,.65)";
-    $statusPill.style.borderColor = ok ? "rgba(0,0,0,.10)" : "rgba(0,0,0,.08)";
-    $checkoutBtn.disabled = !ok; // 接続できてない時は決済進めない（事故防止）
+    $checkoutBtn.disabled = !ok;
   }
 
   function bootFirebase(){
@@ -568,6 +570,16 @@
   function renderProducts(){
     $products.innerHTML = "";
 
+    if(!products.length){
+      const d = document.createElement("div");
+      d.className = "muted";
+      d.style.padding = "8px 2px";
+      d.textContent = "商品マスタが空です（products_bundle.json を確認）";
+      $products.appendChild(d);
+      updateTotal();
+      return;
+    }
+
     products.forEach(p=>{
       const row = document.createElement("div");
       row.className = "product-row";
@@ -640,7 +652,6 @@
       const qty = Number(sel.value || 1);
       const subtotal = (p.price || 0) * qty;
 
-      // ✅ 売上側は当時の情報を固定（後日値上げしても崩れない）
       items.push({
         id: p.id,
         name: p.name,
@@ -732,15 +743,9 @@
       venue: venue,                   // マルシェ以外は ""
       paymentMethod: pay,
       total,
-      items,
-
-      // 任意で追加するならここ：
-      // staffId: "01",
-      // deviceId: "iphone-xxx",
+      items
     };
 
-    // ✅ コレクション名（ここも好みで変えてOK）
-    // 例：sales / receipts / transactions
     const colRef = collection(db, "sales");
     return await addDoc(colRef, docData);
   }
@@ -768,6 +773,17 @@
   /* ---------- init ---------- */
   bootFirebase();
   renderSettingsUI();
+
+  try{
+    products = await loadProductsFromBundle();
+    $masterPill.textContent = `商品マスタ：${products.length}件`;
+  }catch(e){
+    console.error(e);
+    $masterPill.textContent = "商品マスタ：読込失敗";
+    alert("商品マスタが読み込めません（products_bundle.json を確認）");
+    products = [];
+  }
+
   renderProducts();
   updateTotal();
 </script>
