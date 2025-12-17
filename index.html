@@ -420,12 +420,12 @@
   <div class="toast" id="toast">保存しました</div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
 /* =========================
    Firebase
 ========================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyCINAN5ciYMvKhnrm7thQ8mhK1rL8KQu_o",
   authDomain: "handmade-pos-dev.firebaseapp.com",
@@ -433,28 +433,32 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db  = getFirestore(app);
 
 /* =========================
    DOM
 ========================= */
 const productsWrap = document.getElementById("products");
-const totalText   = document.getElementById("totalText");
-const masterPill  = document.getElementById("masterCount");
+const totalText    = document.getElementById("totalText");
+const masterPill   = document.getElementById("masterCount");
+const statusPill   = document.getElementById("statusPill");
+
+statusPill.textContent = "Firestore接続OK";
 
 /* =========================
-   Load Products
+   Products
 ========================= */
 let products = [];
 
 async function loadProducts() {
-  /* --- ① bundle --- */
-  const bundleRes = await fetch("./products_bundle.json");
+  /* --- bundle（絶対パス） --- */
+  const bundleRes = await fetch(
+    "https://raiki-202.github.io/handmade-pos-demo/products_bundle.json"
+  );
   const bundle = await bundleRes.json();
-
   products = structuredClone(bundle.products);
 
-  /* --- ② patch --- */
+  /* --- patch --- */
   const snap = await getDocs(collection(db, "products_patch"));
   console.log("patch docs:", snap.size, snap.docs.map(d => d.id));
 
@@ -472,10 +476,8 @@ async function loadProducts() {
     patchCount++;
   });
 
-  /* --- 表示 --- */
-  if (masterPill) {
-    masterPill.textContent = `商品マスタ：${products.length}件（patch ${patchCount}）`;
-  }
+  masterPill.textContent =
+    `商品マスタ：${products.length}件（patch ${patchCount}）`;
 
   renderProducts();
 }
@@ -523,6 +525,7 @@ function renderProducts() {
 ========================= */
 function updateTotal() {
   let total = 0;
+
   document.querySelectorAll(".product-row").forEach(row => {
     const cb  = row.querySelector("input");
     const sel = row.querySelector("select");
@@ -531,6 +534,7 @@ function updateTotal() {
     const p = products.find(x => x.id === cb.dataset.id);
     total += p.price * Number(sel.value);
   });
+
   totalText.textContent = `合計：￥${total}`;
 }
 
